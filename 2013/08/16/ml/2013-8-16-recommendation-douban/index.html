@@ -1,0 +1,233 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>豆瓣读书推荐 | Danny</title>
+  <meta name="author" content="danny.liu">
+  
+  <meta name="description" content="豆瓣读书的推荐demo">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="豆瓣读书推荐"/>
+  <meta property="og:site_name" content="Danny"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  
+  
+    <link href="/favicon.png" rel="icon">
+  
+  
+  <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/font-awesome.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/highlight.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/google-fonts.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+  <script src="/js/jquery-2.0.3.min.js"></script>
+
+  <!-- analytics -->
+  
+
+</head>
+
+ <body>  
+  <nav id="main-nav" class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+      <button type="button" class="navbar-header navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+		<span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+	  <a class="navbar-brand" href="/">Danny</a>
+      <div class="collapse navbar-collapse nav-menu">
+		<ul class="nav navbar-nav">
+		  
+		  <li>
+			<a href="/about" title="about me">
+			  <i class="fa fa-user"></i>ABOUT
+			</a>
+		  </li>
+		  
+		</ul>
+      </div>
+    </div> <!-- container -->
+</nav>
+<div class="clearfix"></div>
+
+  <div class="container">
+  	<div class="content">
+    	 
+
+
+	
+		<div class="page-header">		
+			<h1> 豆瓣读书推荐</h1>
+		</div>		
+	
+
+
+
+<div class="row post">
+	<!-- cols -->
+	
+	<div class="col-md-9">
+	
+
+	
+		 <div class="alert alert-success description">
+			<i class="fa fa-info-circle"></i> <p>豆瓣读书的推荐demo</p>
+			
+		</div> <!-- alert -->
+			
+
+	<!-- content -->
+	<div class="mypage">		
+	    <p>之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。<br><a id="more"></a><br>豆瓣读书的推荐主要有两个页面：<br>一个是每本书的主页， 比如梁文道的<a href="http://book.douban.com/subject/4031698/" target="_blank" rel="external">读者</a>。豆瓣会有一个推荐的section: <em>喜欢读”读者”的人也喜欢…</em>。 这句话似乎是说推荐是基于<strong>协同过滤</strong>的。我很奇怪为什么豆瓣会用这样的标题，这里明显不会是基于协同的推荐， 因为我用不同的用户登录， 推荐的结果是一样的。从推荐的结果来也像是<strong>content based</strong>， 更准确点是<strong>tag-based</strong>。 因为推荐的大多还是梁文道的书，还有些书tag是<em>随笔</em>、<em>文化</em>什么的。<br>另一个是<a href="http://book.douban.com/recommended" target="_blank" rel="external">豆瓣猜</a>。首先会列出你可能感兴趣的新书。之后是你可能感兴趣的tag和book。这里应该是混合推荐了。</p>
+<p>当然，这都是猜想。试试看吧。</p>
+<h4 id="Warm-up">Warm-up</h4>
+<p>先解释下数据模型，爬的数据有people，book，tag以及相互的对应关系。构建三个matrix就可以将三者联系起来了。如图:</p>
+<p><img src="/images/recommendation/douban_model.jpg" alt="data model"></p>
+<p>再说明下， 所有的算法都是based on mahout。</p>
+<h4 id="tag-based">tag-based</h4>
+<p>给定一本书， 找到一本tag相似的书。可以把book-tag matrix作input，这样tag就相当于book的dimension, 可以用<em>PearsonCorrelationSimilarity</em>， 即皮尔逊系数来衡量book之间的距离。这样找相似的书， 即找最近的邻居：</p>
+<p><pre><code><br>UserSimilarity similarity = new PearsonCorrelationSimilarity(model);<br>NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(getHowMany(), similarity, model);<br></code></pre><br>但是推荐的结果不尽人意。想到之前微博推荐的经验， 可以先对book根据book-tag matrix<strong>聚类</strong>，再在每个cluster里找邻居，这样可以消除一些离群点的影响。看结果：</p>
+<p><img src="/images/recommendation/rec_douban_tag.jpg" alt="data model"></p>
+<p>可以看到推荐的结果有<a href="http://book.douban.com/subject/3644791/" target="_blank" rel="external">噪音太多</a>、<a href="http://book.douban.com/subject/1831760/" target="_blank" rel="external">弱水三千</a>…</p>
+<h4 id="协同过滤">协同过滤</h4>
+<p>协同过滤， 说白了也是在people-book matrix里找邻居。不同的是user-based collaborative filtering是把book当成people的dimension。而item-based collaborative filtering则反过来。这里仍然用<em>PearsonCorrelationSimilarity</em>来衡量相似度：</p>
+<p><pre><code><br>UserSimilarity similarity = new PearsonCorrelationSimilarity(model);<br>NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(numNeighbor, similarity, model);<br>Recommender recommender = new GenericUserBasedRecommender(model, neighbors, similarity);<br></code></pre><br>很遗憾没有爬到自己的账号。随便选个账号来测试，结果：</p>
+<p>item-based<br><img src="/images/recommendation/rec_douban_item.jpg" alt="data model"></p>
+<p>user-based<br><img src="/images/recommendation/rec_douban_user.jpg" alt="data model"></p>
+<p>因为爬到的数据不多， 本来就稀疏的matrix交集更少。推荐出来的结果都是些可能看过一两本相同书的people给出的推荐。这也反映出协同过滤的cold start问题。不知道豆瓣是怎样解决的。</p>
+<p>同上，我也试着对people根据people-tag matrix先聚类再做item-based collaborative filtering。推荐出来的比较像tag-based的结果。</p>
+<h4 id="new_book_recommendation">new book recommendation</h4>
+<p>豆瓣还有个推荐新书的功能。根据爬到的数据，我能想到的方法就是计算people的历史tag跟新书tag之间distance，选距离最近的people。但是这时的距离应该是什么呢？ EuclideanDistance？试了下， 结果比较无语，因为推荐出来的都是些过分活跃的用户-那些所有tag都有比较大的weight的用户。</p>
+<p>其实这也可以理解， content based必然会有热门问题，比如豆瓣的tag-based推荐，像<em>文学</em>、<em>小说</em>这样的tag就比较泛滥。 所以很多文学类小说的推荐常常会被几本热门的名著占据。 按理说豆瓣应该会对tag清理过，不明白为什么还是会有这样的问题。</p>
+<p>显然要换个距离， 欧式距离会计算所有tag间的距离，是否可以让距离只考虑新书的tag在people上的weight。想到了对people向量做横向归一处理，这样就消除了热门tag对people的影响，也就能找到新书的tag占最大weigh的people。 看结果:</p>
+<p><img src="/images/recommendation/rec_douban_new.jpg" alt="data model"></p>
+<p>这样就为<a href="http://book.douban.com/subject/1041007/" target="_blank" rel="external">哈利·波特与魔法石</a>找到了用户<a href="http://book.douban.com/people/tuzicxy/collect" target="_blank" rel="external">tuzicxy</a>、<a href="http://book.douban.com/people/70621573/collect" target="_blank" rel="external">70621573</a>…</p>
+	  
+	</div>
+
+	<div>
+  	<center>
+	<div class="pagination">
+<ul class="pagination">
+	 
+				
+    	<li class="prev"><a href="/2014/04/12/hadoop/2014-04-12-note-hive/" class="alignleft prev"><i class="fa fa-arrow-circle-o-left"></i>上一页</a></li>
+  		
+
+        <li><a href="/about"><i class="fa fa-archive"></i>Archive</a></li>
+
+		
+		   <li class="next"><a href="/2013/07/14/hadoop/2013-07-14-hadoop-sort/" class="alignright next">下一页<i class="fa fa-arrow-circle-o-right"></i></a></li>         
+        
+	
+</ul>
+</div>
+
+    </center>
+	</div>
+	
+	<!-- comment -->
+	
+<section id="comment">
+  <h2 class="title">留言</h2>
+
+  
+</section>
+
+	
+	</div> <!-- col-md-9/col-md-12 -->
+	
+	
+		<div class="col-md-3"> 
+
+	<!-- date -->
+	
+	<div class="meta-widget">
+	<i class="fa fa-clock-o"></i>
+	2013-08-16 
+	</div>
+	
+
+	<!-- categories -->
+    
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#categorys"><i class="fa fa-folder"></i></a>	
+    <ul id="categorys" class="tag_box list-unstyled collapse in">
+          
+  <li>
+    <li><a href="/categories/recommendation/">recommendation<span>1</span></a></li>
+  </li>
+
+    </ul>
+	</div>
+	
+
+	<!-- tags -->
+	
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#tags"><i class="fa fa-tags"></i></a>		  
+    <ul id="tags" class="tag_box list-unstyled collapse in">	  
+	    
+  <li><a href="/tags/machine-learning/">machine learning<span>3</span></a></li> <li><a href="/tags/recommendation/">recommendation<span>1</span></a></li>
+    </ul>
+	</div>
+		
+
+	<!-- toc -->
+	<div class="meta-widget">
+	
+	</div>
+	
+    <hr>
+	
+</div><!-- col-md-3 -->
+
+	
+
+</div><!-- row -->
+
+	</div>
+  </div>
+  <div class="container-narrow">
+  <footer> <p>
+  &copy; 2014 danny.liu
+  
+      with help from <a href="http://zespia.tw/hexo/" target="_blank">Hexo</a> and <a href="http://getbootstrap.com/" target="_blank">Twitter Bootstrap</a>. Theme by <a href="http://github.com/wzpan/hexo-theme-freemind/">Freemind</a>.    
+</p> </footer>
+</div> <!-- container-narrow -->
+  
+<a id="gotop" href="#">   
+  <span>▲</span> 
+</a>
+
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+</body>
+   </html>

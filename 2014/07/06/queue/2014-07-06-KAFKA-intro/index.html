@@ -1,0 +1,236 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>kafka 入门 | Danny</title>
+  <meta name="author" content="danny.liu">
+  
+  <meta name="description" content="官方是这样定义 KAFKA 的:
+
+Kafka is a distributed, partitioned, replicated commit log service. It provides the functionality of a messaging system, but with a unique design.
+
+一个分布式、可分区、基于备份的日志服务，可提供消息队列服务，却和传统的JMS有着不同的设计。这就是 Apache Kafka。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="kafka 入门"/>
+  <meta property="og:site_name" content="Danny"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  
+  
+    <link href="/favicon.png" rel="icon">
+  
+  
+  <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/font-awesome.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/highlight.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/google-fonts.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+  <script src="/js/jquery-2.0.3.min.js"></script>
+
+  <!-- analytics -->
+  
+
+</head>
+
+ <body>  
+  <nav id="main-nav" class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+      <button type="button" class="navbar-header navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+		<span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+	  <a class="navbar-brand" href="/">Danny</a>
+      <div class="collapse navbar-collapse nav-menu">
+		<ul class="nav navbar-nav">
+		  
+		  <li>
+			<a href="/about" title="about me">
+			  <i class="fa fa-user"></i>ABOUT
+			</a>
+		  </li>
+		  
+		</ul>
+      </div>
+    </div> <!-- container -->
+</nav>
+<div class="clearfix"></div>
+
+  <div class="container">
+  	<div class="content">
+    	 
+
+
+	
+		<div class="page-header">		
+			<h1> kafka 入门</h1>
+		</div>		
+	
+
+
+
+<div class="row post">
+	<!-- cols -->
+	
+	<div class="col-md-9">
+	
+
+			
+
+	<!-- content -->
+	<div class="mypage">		
+	    <p>官方是这样定义 KAFKA 的:</p>
+<blockquote>
+<p>Kafka is a distributed, partitioned, replicated commit log service. It provides the functionality of a messaging system, but with a unique design.</p>
+</blockquote>
+<p>一个分布式、可分区、基于备份的日志服务，可提供消息队列服务，却和传统的JMS有着不同的设计。这就是 Apache Kafka。<br><a id="more"></a></p>
+<h4 id="Design">Design</h4>
+<p><img src="/images/queue/kafka_design.jpg" alt="kafka_design"></p>
+<ul>
+<li>topic。 message按topic进行分组。在生产者端，producer将message发到指定的topic。而一台kafka server-broker则会将message按topic进行partition，同时每个partition都会保存数个(可配置)replication。这种分区、备份机制都按Master-slave方式工作，其中一台broker会成为leader。</li>
+<li>producer。 producer可以指定发消息到具体的topic和partition。所以说生产Load balancing其实是由producer客户端实现的。</li>
+<li>consumer。 consumer按照group进行分组，对于一个topic里的一条消息，只会被一个consumer group的一个consumer消费。并且同一时刻，一个consumer的消息只会被group里的一个consumer消费，这样保证同一个group里的所有consumer是有序消费一个partition里的所有消息。所以，consumer数量不要大于partition数量。</li>
+</ul>
+<h4 id="Keyword">Keyword</h4>
+<p>Kafka被设计成应对网站活动日志流等case。所以有几个关键词：高吞吐、实时。</p>
+<p>不同于传统的消息队列服务，消息在kafka中被持久化是一种常态-以log形式保存在磁盘。所以对内存的压力不会随着消息的积压而升高。</p>
+<p>所以需要担心的是磁盘IO。但是kafka保存消息log只有append操作，即不会对log有随机读写-没有寻址。官方是这样解释的：</p>
+<blockquote>
+<p>The key fact about disk performance is that the throughput of hard drives has been diverging from the latency of a disk seek for the last decade. As a result the performance of linear writes on a JBOD configuration with six 7200rpm SATA RAID-5 array is about 600MB/sec but the performance of random writes is only about 100k/sec—a difference of over 6000X. These linear reads and writes are the most predictable of all usage patterns, and are heavily optimized by the operating system. A modern operating system provides read-ahead and write-behind techniques that prefetch data in large block multiples and group smaller logical writes into large physical writes.</p>
+</blockquote>
+<p>可见线性读写其实可以很快，而且这还节省了 JVM 上的对象回收 和 GC 时间。</p>
+<p>当然还有网络IO。kafka采用轻量级的TCP协议传输message。而且还会采取 zip message、buffer等措施减轻网络IO压力。</p>
+<h4 id="Different_from_JMS">Different from JMS</h4>
+<ul>
+<li>Message持久保存。 不同JMS，即使消息被消费，消息仍然不会被立即删除.日志文件将会根据broker中的配置要求,保留一定的时间之后再删除。</li>
+<li>Message消费顺序由consumer控制。kafka消费消息并不是全局严格有序，事实上，Kafka只能保证一个group下的consumer正常情况下消费一个partition里的消息是有序的。而且consumer可以设置offset按任意顺序消费message。</li>
+<li>consumer主动去pull message。这样consumer可以根据消费能力去消费message。也可以对fetch message作一些优化，如batch fetch。</li>
+<li>轻量级ack。不同JMS向queue发送ACK，kafka只需要consumer向zookeeper提交消息的offset。这种”宽松”的设计, 确实有丢message的危险。</li>
+</ul>
+	  
+	</div>
+
+	<div>
+  	<center>
+	<div class="pagination">
+<ul class="pagination">
+	 
+		
+          <li class="prev disabled"><a><i class="fa fa-arrow-circle-o-left"></i>上一页</a></li>
+        
+
+        <li><a href="/about"><i class="fa fa-archive"></i>Archive</a></li>
+
+		
+		   <li class="next"><a href="/2014/05/13/spark/2014-05-13-spark-ml-clustering/" class="alignright next">下一页<i class="fa fa-arrow-circle-o-right"></i></a></li>         
+        
+	
+</ul>
+</div>
+
+    </center>
+	</div>
+	
+	<!-- comment -->
+	
+<section id="comment">
+  <h2 class="title">留言</h2>
+
+  
+</section>
+
+	
+	</div> <!-- col-md-9/col-md-12 -->
+	
+	
+		<div class="col-md-3"> 
+
+	<!-- date -->
+	
+	<div class="meta-widget">
+	<i class="fa fa-clock-o"></i>
+	2014-07-06 
+	</div>
+	
+
+	<!-- categories -->
+    
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#categorys"><i class="fa fa-folder"></i></a>	
+    <ul id="categorys" class="tag_box list-unstyled collapse in">
+          
+  <li>
+    <li><a href="/categories/queue/">queue<span>1</span></a></li>
+  </li>
+
+    </ul>
+	</div>
+	
+
+	<!-- tags -->
+	
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#tags"><i class="fa fa-tags"></i></a>		  
+    <ul id="tags" class="tag_box list-unstyled collapse in">	  
+	    
+  <li><a href="/tags/kafka/">kafka<span>1</span></a></li>
+    </ul>
+	</div>
+		
+
+	<!-- toc -->
+	<div class="meta-widget">
+	
+	</div>
+	
+    <hr>
+	
+</div><!-- col-md-3 -->
+
+	
+
+</div><!-- row -->
+
+	</div>
+  </div>
+  <div class="container-narrow">
+  <footer> <p>
+  &copy; 2014 danny.liu
+  
+      with help from <a href="http://zespia.tw/hexo/" target="_blank">Hexo</a> and <a href="http://getbootstrap.com/" target="_blank">Twitter Bootstrap</a>. Theme by <a href="http://github.com/wzpan/hexo-theme-freemind/">Freemind</a>.    
+</p> </footer>
+</div> <!-- container-narrow -->
+  
+<a id="gotop" href="#">   
+  <span>▲</span> 
+</a>
+
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+</body>
+   </html>

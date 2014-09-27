@@ -1,0 +1,253 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>排序算法笔记 | Danny</title>
+  <meta name="author" content="danny.liu">
+  
+  <meta name="description" content="排序算法的笔记">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="排序算法笔记"/>
+  <meta property="og:site_name" content="Danny"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  
+  
+    <link href="/favicon.png" rel="icon">
+  
+  
+  <link rel="stylesheet" href="/css/bootstrap.min.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/font-awesome.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/highlight.css" media="screen" type="text/css">
+  <link rel="stylesheet" href="/css/google-fonts.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+  <script src="/js/jquery-2.0.3.min.js"></script>
+
+  <!-- analytics -->
+  
+
+</head>
+
+ <body>  
+  <nav id="main-nav" class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+      <button type="button" class="navbar-header navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+		<span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+	  <a class="navbar-brand" href="/">Danny</a>
+      <div class="collapse navbar-collapse nav-menu">
+		<ul class="nav navbar-nav">
+		  
+		  <li>
+			<a href="/about" title="about me">
+			  <i class="fa fa-user"></i>ABOUT
+			</a>
+		  </li>
+		  
+		</ul>
+      </div>
+    </div> <!-- container -->
+</nav>
+<div class="clearfix"></div>
+
+  <div class="container">
+  	<div class="content">
+    	 
+
+
+	
+		<div class="page-header">		
+			<h1> 排序算法笔记</h1>
+		</div>		
+	
+
+
+
+<div class="row post">
+	<!-- cols -->
+	
+	<div class="col-md-9">
+	
+
+	
+		 <div class="alert alert-success description">
+			<i class="fa fa-info-circle"></i> <p>排序算法的笔记</p>
+			
+		</div> <!-- alert -->
+			
+
+	<!-- content -->
+	<div class="mypage">		
+	    <h4 id="文章排名">文章排名</h4>
+<p>最近工作中需要对一个CMS中的post排序进行优化, 所以临时学习了下各种文章排名算法。 而影响排序的因素无非是时间、总评数、好评、差评    ，怎么倾向则根据具体business来定。 比如电商可能会选择忽略时间效应的wilson score， 而像Hacker News就更可能会把时间考虑的比较重要。<br><a id="more"></a><br>上笔记吧：</p>
+<p><img src="/images/note/algorithm/sort_2.jpg" alt="排名算法"></p>
+<h4 id="排序基础">排序基础</h4>
+<p>顺便复习下基础的排序算法。 看过去的笔记总觉得是件开心事。</p>
+<h5 id="冒泡、插入、选择">冒泡、插入、选择</h5>
+<p>这三个排序都需要两遍循环array， 所以时间复杂度在最坏情况下都是O(n^2), 也相对比较简单。</p>
+<p><img src="/images/note/algorithm/sort_1.jpg" alt="排序基础"></p>
+<h5 id="快速、归并">快速、归并</h5>
+<p>keyword: <em>Divide-and-Conquer</em>、 <em>空间换时间</em> 、<em>O(nlogn)</em></p>
+<p>Quick sort：</p>
+<pre><code>void quick(int[] ary, int start, int end) {
+    if (start < end) {
+        int index = partition(ary, start, end);
+        quick(ary, index + 1, end);
+        quick(ary, start, index - 1);
+    }
+}
+int partition(int[] ary, int left, int right) {
+    int temp = ary[left], index = left;
+    swap(ary, index, right); // 基准点后置
+    for (int i = index; i < right; ++i) {
+        if (ary[i] < temp)
+            swap(ary, index++, i);
+    }
+    swap(ary, index, right); // 换回基准点
+    return index;
+}
+</code></pre>
+Merge sort：
+<pre><code>void merge(int a[], int first, int last) {
+    int temp[] = new int[a.length];
+    if (first < last) {
+        int mid = (first + last)  >> 1;
+        merge(a, first, mid);
+        merge(a, mid + 1, last);
+        memeryArray(a, first, mid, last, temp);
+    }
+}
+void memeryArray(int a[], int first, int mid, int last, int temp[]) {
+    int i = first, j = mid + 1;
+    int m = mid, n = last;
+    int k = 0;
+    while(i <= m="" &&="" j="" <="n){" if="" (a[i]="" temp[k++]="a[i++];" else="" }="" while="" (i="" (j="" for="" i="" k;="" i++)="" a[first="" +="" i]="temp[i];" }<="" code=""></=></code></pre>
+	  
+	</div>
+
+	<div>
+  	<center>
+	<div class="pagination">
+<ul class="pagination">
+	 
+				
+    	<li class="prev"><a href="/2013/07/10/note/2013-07-10-note-ml/" class="alignleft prev"><i class="fa fa-arrow-circle-o-left"></i>上一页</a></li>
+  		
+
+        <li><a href="/about"><i class="fa fa-archive"></i>Archive</a></li>
+
+		
+		   <li class="next"><a href="/2013/03/09/travel/2013-3-9-zoo/" class="alignright next">下一页<i class="fa fa-arrow-circle-o-right"></i></a></li>         
+        
+	
+</ul>
+</div>
+
+    </center>
+	</div>
+	
+	<!-- comment -->
+	
+<section id="comment">
+  <h2 class="title">留言</h2>
+
+  
+</section>
+
+	
+	</div> <!-- col-md-9/col-md-12 -->
+	
+	
+		<div class="col-md-3"> 
+
+	<!-- date -->
+	
+	<div class="meta-widget">
+	<i class="fa fa-clock-o"></i>
+	2013-07-03 
+	</div>
+	
+
+	<!-- categories -->
+    
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#categorys"><i class="fa fa-folder"></i></a>	
+    <ul id="categorys" class="tag_box list-unstyled collapse in">
+          
+  <li>
+    <li><a href="/categories/note/">note<span>5</span></a></li>
+  </li>
+
+    </ul>
+	</div>
+	
+
+	<!-- tags -->
+	
+	<div class="meta-widget">
+	<a data-toggle="collapse" data-target="#tags"><i class="fa fa-tags"></i></a>		  
+    <ul id="tags" class="tag_box list-unstyled collapse in">	  
+	    
+  <li><a href="/tags/sort/">sort<span>2</span></a></li>
+    </ul>
+	</div>
+		
+
+	<!-- toc -->
+	<div class="meta-widget">
+	
+	</div>
+	
+    <hr>
+	
+</div><!-- col-md-3 -->
+
+	
+
+</div><!-- row -->
+
+	</div>
+  </div>
+  <div class="container-narrow">
+  <footer> <p>
+  &copy; 2014 danny.liu
+  
+      with help from <a href="http://zespia.tw/hexo/" target="_blank">Hexo</a> and <a href="http://getbootstrap.com/" target="_blank">Twitter Bootstrap</a>. Theme by <a href="http://github.com/wzpan/hexo-theme-freemind/">Freemind</a>.    
+</p> </footer>
+</div> <!-- container-narrow -->
+  
+<a id="gotop" href="#">   
+  <span>▲</span> 
+</a>
+
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/main.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+</body>
+   </html>
