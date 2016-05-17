@@ -1,0 +1,942 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Dan</title>
+    <description></description>
+    <link>http://dannyhnu.github.io/</link>
+    <atom:link href="http://dannyhnu.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Mon, 16 May 2016 22:01:45 +0800</pubDate>
+    <lastBuildDate>Mon, 16 May 2016 22:01:45 +0800</lastBuildDate>
+    <generator>Jekyll v3.1.3</generator>
+    
+      <item>
+        <title>spark core - Broadcast</title>
+        <description>&lt;p&gt;最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过&lt;strong&gt;spark broadcast&lt;/strong&gt;广播到各个executor进行rdd map join。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;说回这篇文章的主题-spark broadcast。spark目前有两种广播的方法：http和p2p。二者的区别是各个executor在第一次怎么拿到广播变量。一旦executor拿到广播变量后就会立即放到本地storage。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;// 把广播变量缓存到BlockManager，这样后续的任务就不需要再去重新fetch了
+SparkEnv.get.blockManager.putSingle(blockId, value_, StorageLevel.MEMORY_AND_DISK, tellMaster = false)
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;h4&gt;HttpBroadcast&lt;/h4&gt;
+
+&lt;p&gt;Http的广播方法比较简单，在driver写一个local file，起一个http server。所以executor在&lt;em&gt;getValue&lt;/em&gt;的时候其实就是通过url访问driver上的http server拿到广播变量。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;//！代码都精简过的
+/*
+ * driver 写local file
+ */
+private def write(id: Long, value: Any) {
+    // 拿到一个本地文件
+    val file = getFile(id) 
+    val fileOutputStream = new FileOutputStream(file)
+    ...
+   // 序列化
+    val ser = SparkEnv.get.serializer.newInstance()
+    val serOut = ser.serializeStream(out)
+    ...
+    serOut.writeObject(value)
+ }
+ /*
+ * 起http server
+ */
+private def createServer(conf: SparkConf) {
+  broadcastDir = Utils.createTempDir(Utils.getLocalDir(conf), &quot;broadcast&quot;)
+  val broadcastPort = conf.getInt(&quot;spark.broadcast.port&quot;, 0)
+  server =
+    new HttpServer(conf, broadcastDir, securityManager, broadcastPort, &quot;HTTP broadcast server&quot;)
+  server.start()
+  serverUri = server.uri
+}
+ /*
+ * 读广播变量
+ */
+private def read[T: ClassTag](id: Long): T = {
+  // 组装请求
+  val url = serverUri + &quot;/&quot; + BroadcastBlockId(id).name
+  uc = new URL(url).openConnection()
+  ...
+   //请求广播变量
+  val inputStream = uc.getInputStream
+  val in = new BufferedInputStream(inputStream, bufferSize)
+  ...
+  // 反序列化
+  val ser = SparkEnv.get.serializer.newInstance()
+  val serIn = ser.deserializeStream(in)
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;h4&gt;TorrentBroadcast&lt;/h4&gt;
+
+&lt;p&gt;Torrent采用spark storage模块广播数据。首先会按照特定大小（默认4M）对数据进行分块,  然后把各个piece写到storage。第一次读取变量也是从driver或者其他的executor拿到各个piece然后保存到本地。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;//！代码都精简过的
+/*
+ * 数据写入storage
+ */
+private def writeBlocks(value: T): Int = {
+  // driver上保存一份广播数据，防止重复存储
+  SparkEnv.get.blockManager.putSingle(broadcastId, value, StorageLevel.MEMORY_AND_DISK,
+    tellMaster = false)
+   //对数据进行分块
+  val blocks =
+    TorrentBroadcast.blockifyObject(value, blockSize, SparkEnv.get.serializer, compressionCodec)
+    // 各个块写到storage
+  blocks.zipWithIndex.foreach { case (block, i) =&gt;
+    SparkEnv.get.blockManager.putBytes(
+      BroadcastBlockId(id, &quot;piece&quot; + i),
+      block,
+      StorageLevel.MEMORY_AND_DISK_SER,
+      tellMaster = true)
+  }
+  blocks.length
+}
+ /*
+ * 读取数据
+ */
+ private def readBlocks(): Array[ByteBuffer] = {
+...
+  //循环各个数据块
+  for (pid &lt;- Random.shuffle(Seq.range(0, numBlocks))) {
+    val pieceId = BroadcastBlockId(id, &quot;piece&quot; + pid)
+    // 从本地取
+    def getLocal: Option[ByteBuffer] = bm.getLocalBytes(pieceId)
+    // 本地取不到则从远程取
+    def getRemote: Option[ByteBuffer] = bm.getRemoteBytes(pieceId).map { block =&gt;
+      // 取到保存到本地
+      SparkEnv.get.blockManager.putBytes(
+        pieceId,
+        block,
+        StorageLevel.MEMORY_AND_DISK_SER,
+        tellMaster = true)
+      block
+    }
+    val block: ByteBuffer = getLocal.orElse(getRemote).getOrElse(
+      throw new SparkException(s&quot;Failed to get $pieceId of $broadcastId&quot;))
+    blocks(pid) = block
+  }
+  blocks
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+</description>
+        <pubDate>Mon, 16 May 2016 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2016/05/16/spark-broadcast/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2016/05/16/spark-broadcast/</guid>
+        
+        
+        <category>spark</category>
+        
+      </item>
+    
+      <item>
+        <title>kafka</title>
+        <description>&lt;p&gt;官方是这样定义 KAFKA 的:&lt;/p&gt;
+
+&lt;blockquote&gt;&lt;p&gt;Kafka is a distributed, partitioned, replicated commit log service. It provides the functionality of a messaging system, but with a unique design.&lt;/p&gt;&lt;/blockquote&gt;
+
+&lt;p&gt;一个分布式、可分区、基于备份的日志服务，可提供消息队列服务，却和传统的JMS有着不同的设计。这就是 Apache Kafka。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;h4&gt;Design&lt;/h4&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/queue/kafka_design.jpg&quot; alt=&quot;kafka_design&quot; /&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;topic。 message按topic进行分组。在生产者端，producer将message发到指定的topic。而一台kafka server-broker则会将message按topic进行partition，同时每个partition都会保存数个(可配置)replication。这种分区、备份机制都按Master-slave方式工作，其中一台broker会成为leader。&lt;/li&gt;
+&lt;li&gt;producer。 producer可以指定发消息到具体的topic和partition。所以说生产Load balancing其实是由producer客户端实现的。&lt;/li&gt;
+&lt;li&gt;consumer。 consumer按照group进行分组，对于一个topic里的一条消息，只会被一个consumer group的一个consumer消费。并且同一时刻，一个consumer的消息只会被group里的一个consumer消费，这样保证同一个group里的所有consumer是有序消费一个partition里的所有消息。所以，consumer数量不要大于partition数量。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;Keyword&lt;/h4&gt;
+
+&lt;p&gt;Kafka被设计成应对网站活动日志流等case。所以有几个关键词：高吞吐、实时。&lt;/p&gt;
+
+&lt;p&gt;不同于传统的消息队列服务，消息在kafka中被持久化是一种常态-以log形式保存在磁盘。所以对内存的压力不会随着消息的积压而升高。&lt;/p&gt;
+
+&lt;p&gt;所以需要担心的是磁盘IO。但是kafka保存消息log只有append操作，即不会对log有随机读写-没有寻址。官方是这样解释的：&lt;/p&gt;
+
+&lt;blockquote&gt;&lt;p&gt;The key fact about disk performance is that the throughput of hard drives has been diverging from the latency of a disk seek for the last decade. As a result the performance of linear writes on a JBOD configuration with six 7200rpm SATA RAID-5 array is about 600MB/sec but the performance of random writes is only about 100k/sec—a difference of over 6000X. These linear reads and writes are the most predictable of all usage patterns, and are heavily optimized by the operating system. A modern operating system provides read-ahead and write-behind techniques that prefetch data in large block multiples and group smaller logical writes into large physical writes.&lt;/p&gt;&lt;/blockquote&gt;
+
+&lt;p&gt;可见线性读写其实可以很快，而且这还节省了 JVM 上的对象回收 和 GC 时间。&lt;/p&gt;
+
+&lt;p&gt;当然还有网络IO。kafka采用轻量级的TCP协议传输message。而且还会采取 zip message、buffer等措施减轻网络IO压力。&lt;/p&gt;
+
+&lt;h4&gt;Different from JMS&lt;/h4&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Message持久保存。 不同JMS，即使消息被消费，消息仍然不会被立即删除.日志文件将会根据broker中的配置要求,保留一定的时间之后再删除。&lt;/li&gt;
+&lt;li&gt;Message消费顺序由consumer控制。kafka消费消息并不是全局严格有序，事实上，Kafka只能保证一个group下的consumer正常情况下消费一个partition里的消息是有序的。而且consumer可以设置offset按任意顺序消费message。&lt;/li&gt;
+&lt;li&gt;consumer主动去pull message。这样consumer可以根据消费能力去消费message。也可以对fetch message作一些优化，如batch fetch。&lt;/li&gt;
+&lt;li&gt;轻量级ack。不同JMS向queue发送ACK，kafka只需要consumer向zookeeper提交消息的offset。这种&quot;宽松&quot;的设计, 确实有丢message的危险。&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Sun, 06 Jul 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/07/06/KAFKA-intro/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/07/06/KAFKA-intro/</guid>
+        
+        
+        <category>queue</category>
+        
+      </item>
+    
+      <item>
+        <title>spark ML - CLSUTERING </title>
+        <description>&lt;p&gt;首先我想吐槽下。 相比mahout，spark ML包组织架构有点不忍直视。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;没有统一的数据结构。而且借用了两套三方linear algebra库: &lt;a href=&quot;http://mikiobraun.github.io/jblas/&quot;&gt;jblas&lt;/a&gt; 和 &lt;a href=&quot;https://github.com/scalanlp/breeze/wiki/Breeze-Linear-Algebra&quot;&gt;Breeze&lt;/a&gt;。 借用jblas是由于其强大的矩阵计算能力。 而Breeze我怀疑是因为spark的一些作者恰好也是Breeze的贡献者。&lt;/li&gt;
+&lt;li&gt;没有抽象的距离类。可能因为目前没有涉及太多向量距离的算法，所以目前只有 &lt;em&gt;KMEANS&lt;/em&gt; 有一个 &lt;em&gt;fastSquaredDistance&lt;/em&gt;。 更坑爹的是这个距离算法写在了 &lt;em&gt;MLUtils&lt;/em&gt; 这个莫名其妙的类里。当然，等数据结构统一后，这个问题自然迎刃而解了。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;!-- more --&gt;
+
+
+&lt;h4&gt;KMEANS&lt;/h4&gt;
+
+&lt;p&gt;SPARK 目前的开发分支上也只有一个聚类算法(KMeans)。所以根本谈不上接口方法。很简单的三个类：一个model类，一个并行实现类和一个本地实现类。下面是在spark shell上跑的一个简单的例子。&lt;/p&gt;
+
+&lt;h6&gt;数据&lt;/h6&gt;
+
+&lt;p&gt;spark util包里的 &lt;em&gt;generateKMeansRDD&lt;/em&gt; 可以生成KMeans的数据集。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;scala&gt; val data=KMeansDataGenerator.generateKMeansRDD(sc, 50000, 8, 20, 0.8)
+data: org.apache.spark.rdd.RDD[Array[Double]] = MappedRDD[1] at map at KMeansDataGenerator.scala:56&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;这里的data有20个维度，共有50000个point，并且呈有8个中心点的混合高斯分布。&lt;/p&gt;
+
+&lt;h6&gt;训练模型&lt;/h6&gt;
+
+&lt;pre&gt;&lt;code&gt;scala&gt; val model=KMeans.train(data, 8, 50， 10)
+model: org.apache.spark.mllib.clustering.KMeansModel = org.apache.spark.mllib.clustering.KMeansModel@309a5663&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;训练的核心代码是&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;def run(data: RDD[Vector]): KMeansModel = {
+    // Compute squared norms and cache them.
+    val norms = data.map(v =&gt; breezeNorm(v.toBreeze, 2.0))
+    norms.persist()
+    ...
+    val model = runBreeze(breezeData)
+    norms.unpersist()
+    model
+  }
+
+private def runBreeze(data: RDD[BreezeVectorWithNorm]): KMeansModel = {
+    ...
+    // 选初始中心点
+    val centers = if (initializationMode == KMeans.RANDOM) {
+          initRandom(data)
+        } else {
+          initKMeansParallel(data)
+    }
+    ...
+    // 循环所有点，划分至最近中心，并重新选中心点
+    while (iteration &lt; maxIterations &amp;&amp; !activeRuns.isEmpty) {
+        ...
+    }
+    ...
+    new KMeansModel(centers(bestRun).map(c =&gt; Vectors.fromBreeze(c.vector)))
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;em&gt;runBreeze&lt;/em&gt; 方法会先初始 &lt;em&gt;k&lt;/em&gt; 个中心点，然后循环所有point，划分至最近中心，并重新选中心点。 至所有中心点不再变化时， 返回一个带 &lt;em&gt;k&lt;/em&gt; 个中心点的 &lt;em&gt;KMeansModel&lt;/em&gt;。&lt;/p&gt;
+
+&lt;h6&gt;预测&lt;/h6&gt;
+
+&lt;p&gt; &lt;pre&gt;&lt;code&gt;class KMeansModel(val clusterCenters: Array[Vector]) extends Serializable {
+    ...
+    def predict(point: Vector): Int = {
+        KMeans.findClosest(clusterCentersWithNorm, new BreezeVectorWithNorm(point))._1
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+预测代码其实很简单，找出要预测的点和 &lt;em&gt;KMeansModel&lt;/em&gt; 的 &lt;em&gt;k&lt;/em&gt; 个中心最近的中心即为所属类别。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 13 May 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/05/13/spark-ml-clustering/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/05/13/spark-ml-clustering/</guid>
+        
+        
+        <category>spark</category>
+        
+      </item>
+    
+      <item>
+        <title>mysql session</title>
+        <description>&lt;p&gt;先介绍下session的主讲。&lt;a href=&quot;http://www.anysql.net/&quot;&gt;楼方鑫&lt;/a&gt;, 大牛。&lt;/p&gt;
+
+&lt;p&gt;好吧， 其实没怎么听懂啦，就是感觉很牛逼的样子，所以这里记一下大概的意思咯。而且刚从嵊泗看(dou)完(di)海(zhu)回来，身心俱疲，很有可能会胡说八道。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;印象比较深的是关于限流、热点隔离、事务优化的三个topic。&lt;/p&gt;
+
+&lt;h4&gt;限流&lt;/h4&gt;
+
+&lt;p&gt;限流，即控制应用对服务器的资源占用，防止应用拖垮服务器。 而限流策略一般是从三个方向去做的。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;InnoDB的 Thread Concurrency。InnoDB的工作线程控制。&lt;/li&gt;
+&lt;li&gt;server的thread pool。thread pool有两个缺点。 一是大查询会影响所有其他请求。 二是DML操作会影响简单的查询。 所以大牛的解决办法是队列限流。根据请求类型(CRUD)把请求派发到不同的thread queue。这样就解决的thread pool的问题。&lt;/li&gt;
+&lt;li&gt;app层限流。应用自己控制，缺点太多， 不过有控制也是好事。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;热点隔离&lt;/h4&gt;
+
+&lt;p&gt;和上面thread pool的问题有点类似，不同应用对server的资源利用不同，这样应用之间很有可能会相互影响。解决办法也差不多，不同应用进不同的queue。&lt;/p&gt;
+
+&lt;h4&gt;事务优化&lt;/h4&gt;
+
+&lt;p&gt;比较赞同大牛的一个观点就是，像电商、金融这种多交易记录的行业，一个db的强事务性是绝对必须的。事务的基本流程是&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;client创建事务&lt;/li&gt;
+&lt;li&gt;client提交command&lt;/li&gt;
+&lt;li&gt;server执行command&lt;/li&gt;
+&lt;li&gt;client commit&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;p&gt;其实mysql执行一条command的时间大概在微妙级别，但是从client到server端的带宽时间却往往高出一个数量级。所以大牛的优化方法是在第三部server执行完所有操作后自行判断事务是否成功，如果成功，则server自行commit，这样就节省了一半的带宽来回。大牛自己举得例子是，这样优化可以把mysql的单位时间处理量从450万提高到5000万(忘了一些条件，只记得这两个数字，总之效果很牛逼就对了)。&lt;/p&gt;
+</description>
+        <pubDate>Sun, 11 May 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/05/11/mysql-lfx-share/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/05/11/mysql-lfx-share/</guid>
+        
+        
+        <category>db</category>
+        
+      </item>
+    
+      <item>
+        <title>spark ML源码 - CLASSIFICATION</title>
+        <description>&lt;h3&gt;SUMMARY&lt;/h3&gt;
+
+&lt;p&gt;Spark classification在当前的release版本(0.9)上只实现了Naive Bayes、LogisticRegression、SVM。而在&lt;a href=&quot;https://github.com/apache/spark/tree/master/mllib/src/main/scala/org/apache/spark/mllib/classification&quot;&gt;开发分支&lt;/a&gt;上也没有看到有其他算法的计划。这篇文章的代码都是截取自最新的开发分支(branch 1.0)。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;继承scala简洁的风格，废话不多说，直接放码。 spark分类模型接口类：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;trait ClassificationModel extends Serializable {
+    def predict(testData: RDD[Array[Double]]): RDD[Double]
+    def predict(testData: Array[Double]): Double
+}&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;h3&gt;Naive Bayes&lt;/h3&gt;
+
+&lt;p&gt;先回顾下贝叶斯分类，还是用文本分类来举例吧。&lt;/p&gt;
+
+&lt;p&gt;由贝叶斯公式，文章&lt;em&gt;a&lt;/em&gt;被分到类&lt;em&gt;Ci&lt;/em&gt;中的概率是&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;p(Ci|a)=p(a|Ci)*p(Ci)/p(a) ~ p(w1,w2...wn|Ci)*p(Ci)&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;朴素贝叶斯认为&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;p(w1,w2...wn|Ci) ~ p(w1|Ci) * p(w2|Ci) ...&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;所以求 &lt;em&gt;p(Ci|a)&lt;/em&gt; 即求 &lt;em&gt;p(wi|Ci)&lt;/em&gt; 和 &lt;em&gt;p(Ci)&lt;/em&gt; 了。而这里的 &lt;em&gt;p(wi|Ci)&lt;/em&gt; 为单词 &lt;em&gt;wi&lt;/em&gt; 在类别 &lt;em&gt;Ci&lt;/em&gt; 的里概率，即类别 &lt;em&gt;Ci&lt;/em&gt; 里 &lt;em&gt;wi&lt;/em&gt; 的出现次数除以 &lt;em&gt;Ci&lt;/em&gt; 的单词总数。而 &lt;em&gt;p(Ci)&lt;/em&gt; 即为类别 &lt;em&gt;Ci&lt;/em&gt; 的概率，即类别 &lt;em&gt;Ci&lt;/em&gt; 的样本数除以总样本数。&lt;/p&gt;
+
+&lt;p&gt;下面是 &lt;em&gt;spark bayes&lt;/em&gt; 的训练代码&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt; def run(data: RDD[LabeledPoint]) = {
+    // Aggregates term frequencies per label.
+    // TODO: Calling combineByKey and collect creates two stages, we can implement something
+    // TODO: similar to reduceByKeyLocally to save one stage.
+    val aggregated = data.map(p =&gt; (p.label, p.features)).combineByKey[(Long, BDV[Double])](
+      createCombiner = (v: Vector) =&gt; (1L, v.toBreeze.toDenseVector),
+      mergeValue = (c: (Long, BDV[Double]), v: Vector) =&gt; (c._1 + 1L, c._2 += v.toBreeze),
+      mergeCombiners = (c1: (Long, BDV[Double]), c2: (Long, BDV[Double])) =&gt;
+        (c1._1 + c2._1, c1._2 += c2._2)
+    ).collect()
+    val numLabels = aggregated.length
+    var numDocuments = 0L
+    aggregated.foreach { case (_, (n, _)) =&gt;
+      numDocuments += n
+    }
+    val numFeatures = aggregated.head match { case (_, (_, v)) =&gt; v.size }
+    val labels = new Array[Double](numLabels)
+    val pi = new Array[Double](numLabels)
+    val theta = Array.fill(numLabels)(new Array[Double](numFeatures))
+    val piLogDenom = math.log(numDocuments + numLabels * lambda)
+    var i = 0
+    aggregated.foreach { case (label, (n, sumTermFreqs)) =&gt;
+      labels(i) = label
+      val thetaLogDenom = math.log(brzSum(sumTermFreqs) + numFeatures * lambda)
+      pi(i) = math.log(n + lambda) - piLogDenom
+      var j = 0
+      while (j &lt; numFeatures) {
+        theta(i)(j) = math.log(sumTermFreqs(j) + lambda) - thetaLogDenom
+        j += 1
+      }
+      i += 1
+    }
+
+    new NaiveBayesModel(labels, pi, theta)
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;没错，就这么多代码。最后返回的是一个带有 &lt;em&gt;labels&lt;/em&gt;， &lt;em&gt;pi&lt;/em&gt;， &lt;em&gt;theta&lt;/em&gt; 三个变量的模型。 先解释几个关键的变量：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;RDD[LabeledPoint]。&lt;em&gt;RDD[LabeledPoint]&lt;/em&gt; 是训练数据的格式， &lt;em&gt;LabeledPoint&lt;/em&gt; 是一个形如 &lt;em&gt;(label, array of features)&lt;/em&gt; 格式的数据。所以输入应该是类似&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;pre&gt;&lt;code&gt;C1 w11,w12,w13...
+C2 w21,w22,w23...&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;的带lable的矩阵。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;aggregated。&lt;em&gt;aggregated&lt;/em&gt; 是形如 &lt;em&gt;label -&gt; (count, featuresSum)&lt;/em&gt; 格式的数据。它是将所有训练样本分类别进行聚合。其中lable是类别标签，count是该类别的训练样本数 featuresSum是该类别所有dimension相加的和。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;numLabels,numDocuments，numFeatures。numLabels是aggregated的size，即类别的数量。numDocuments是count的和，即所有训练样本的总数。numFeatures是dimensions的长度，即样本空间有多少维。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;labels。 labels数组存储的是所有的类别。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;pi。 pi也是长度为numLabels的数组。存储的是&lt;pre&gt;&lt;code&gt;pi(i) = math.log(n + lambda) - piLogDenom&lt;/code&gt;&lt;/pre&gt;而&lt;pre&gt;&lt;code&gt;val piLogDenom = math.log(numDocuments + numLabels * lambda)&lt;/code&gt;&lt;/pre&gt;所以&lt;pre&gt;&lt;code&gt;pi(i) = math.log((n + lambda) / (numDocuments + numLabels * lambda))&lt;/code&gt;&lt;/pre&gt;n是类别i的样本数，numDocuments是总样本数。也就是说 &lt;em&gt;pi(i)&lt;/em&gt; 就是类别 i 的概率 &lt;em&gt;p(Ci)&lt;/em&gt;。 分子加lambda和分母加numLabels * lambda是为了防止0概率事件，即拉普拉斯平滑。&lt;/li&gt;
+&lt;li&gt;theta。theta是 n X numFeatures 的矩阵。&lt;pre&gt;&lt;code&gt;theta(i)(j) = math.log(sumTermFreqs(j) + lambda) - thetaLogDenom
+             = math.log(sumTermFreqs(j) + lambda) - math.log(brzSum(sumTermFreqs) + numFeatures * lambda)
+         = math.log((sumTermFreqs(j) + lambda) / (brzSum(sumTermFreqs) + numFeatures * lambda))
+&lt;/code&gt;&lt;/pre&gt;sumTermFreqs(j)是词 &lt;em&gt;wj&lt;/em&gt; 在类别 &lt;em&gt;i&lt;/em&gt; 的频率，sumTermFreqs是类别 &lt;em&gt;i&lt;/em&gt; 的单词总数。所以 &lt;em&gt;theta(i)(j)&lt;/em&gt; 存储的是单词 j 在类别 &lt;em&gt;i&lt;/em&gt; 的概率 &lt;em&gt;p(wj|Ci)&lt;/em&gt;。分子分母加 &lt;em&gt;lambda&lt;/em&gt; 同样是为了防止0概率事件的发生。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;而 &lt;em&gt;NaiveBayesModel&lt;/em&gt; 的预测代码其实就一行&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;override def predict(testData: Vector): Double = {
+    labels(brzArgmax(brzPi + brzTheta * testData.toBreeze))
+}&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;预测样本和矩阵 &lt;em&gt;brzTheta&lt;/em&gt; 相乘得到的就是样本在各个类别里的&lt;pre&gt;&lt;code&gt;p(w1|Ci) * p(w2|Ci) * p(w3|Ci)..&lt;/code&gt;&lt;/pre&gt;最后加上 &lt;em&gt;brzPi&lt;/em&gt; 即为乘以 &lt;em&gt;P(Ci)&lt;/em&gt;(因为所有的概率都用math.log处理过)。最后 &lt;em&gt;brzArgmax&lt;/em&gt; 即返回可能性最大的类别。&lt;/p&gt;
+
+&lt;h3&gt;Generalized Linear Algorithm&lt;/h3&gt;
+
+&lt;p&gt;LogisticRegression、SVM都是继承于广义线性模型(GeneralizedLinearModel)。二者都只能处理二分类问题。&lt;/p&gt;
+
+&lt;p&gt;稍微解释下&lt;em&gt;广义线性模型&lt;/em&gt;&lt;pre&gt;&lt;code&gt;f(Y)= β0 + β1X1 + β2X2 + β3X3 + ... + intercept&lt;/code&gt;&lt;/pre&gt;因变量 &lt;em&gt;Y&lt;/em&gt; 的分布可能多种多样，但是通过连接函数 &lt;em&gt;f&lt;/em&gt; 的转换就可以用 &lt;em&gt;Xi&lt;/em&gt; 线性表出。常见的有：&lt;/p&gt;
+
+&lt;table style=&quot;margin: 10px; border:1px solid black&quot;&gt;
+    &lt;tr style=&quot;border:1px solid black; background-color:grey&quot;&gt;
+        &lt;td&gt;Y的分布&lt;/td&gt;&lt;td&gt;连接函数&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;正态分布(normal)&lt;/td&gt;&lt;td&gt;Identity:  f(Y)=Y&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;二项分布(binomial)&lt;/td&gt;&lt;td&gt;Logit:  f(Y)=Logit(Y)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Poisson分布&lt;/td&gt;&lt;td&gt;Log:  f(Y)=log(Y)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;γ 分布(gamma)&lt;/td&gt;&lt;td&gt;inverse:  f(Y)=1/(Y^-1)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;负二项分布(negative binomial)&lt;/td&gt;&lt;td&gt;Log:  f(Y)=log(Y)&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+&lt;p&gt;回到spark， 下面是模型接口GeneralizedLinearAlgorithm的核心代码&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;abstract class GeneralizedLinearAlgorithm[M &lt;: GeneralizedLinearModel]
+  extends Logging with Serializable {
+  def optimizer: Optimizer
+  protected def createModel(weights: Vector, intercept: Double): M
+  def run(input: RDD[LabeledPoint], initialWeights: Vector): M = {
+  val weightsWithIntercept = optimizer.optimize(data, initialWeightsWithIntercept)
+  val intercept = if (addIntercept) weightsWithIntercept(0) else 0.0
+  val weights =
+      if (addIntercept) {
+        Vectors.dense(weightsWithIntercept.toArray.slice(1, weightsWithIntercept.size))
+      } else {
+        weightsWithIntercept
+      }
+    createModel(weights, intercept)
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;核心方法 &lt;em&gt;run&lt;/em&gt; 会通过子类的 &lt;em&gt;optimizer&lt;/em&gt; 训练出 &lt;em&gt;weights&lt;/em&gt; 和 &lt;em&gt;intercept&lt;/em&gt;。最后返回一个带 &lt;em&gt;weights&lt;/em&gt; 和 &lt;em&gt;intercept&lt;/em&gt; 的model。解释下这几个变量：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;optimizer 训练数据的优化方法， 如最小二乘， 梯度下降&lt;/li&gt;
+&lt;li&gt;weights 权重矩阵， 即方程里的 &lt;em&gt;βi&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;intercept 残差&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;而GeneralizedLinearAlgorithm的子类， 即各种线性算法的区别就是优化方法和连接函数的不同。&lt;/p&gt;
+
+&lt;h5&gt;Logistic Regression&lt;/h5&gt;
+
+&lt;p&gt;逻辑回归用随机梯度下降训练样本。连接函数代码&lt;pre&gt;&lt;code&gt;override protected def predictPoint(dataMatrix: Vector, weightMatrix: Vector,
+      intercept: Double) = {
+    val margin = weightMatrix.toBreeze.dot(dataMatrix.toBreeze) + intercept
+    val score = 1.0/ (1.0 + math.exp(-margin)) // 这就是logic函数
+    threshold match {
+      case Some(t) =&gt; if (score &amp;lt; t) 0.0 else 1.0
+      case None =&gt; score
+    }
+  }&lt;/code&gt;&lt;/pre&gt;&lt;/p&gt;
+
+&lt;h5&gt;SVM&lt;/h5&gt;
+
+&lt;p&gt;SVM同样用随机梯度下降训练样本。连接函数代码&lt;pre&gt;&lt;code&gt;override protected def predictPoint(
+      dataMatrix: Vector,
+      weightMatrix: Vector,
+      intercept: Double) = {
+    val margin = weightMatrix.toBreeze.dot(dataMatrix.toBreeze) + intercept
+    threshold match {
+      case Some(t) =&gt; if (margin &amp;lt; 0) 0.0 else 1.0
+      case None =&gt; margin
+    }
+  }&lt;/code&gt;&lt;/pre&gt;&lt;/p&gt;
+</description>
+        <pubDate>Tue, 06 May 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/05/06/spark-ml-classfication/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/05/06/spark-ml-classfication/</guid>
+        
+        
+        <category>spark</category>
+        
+      </item>
+    
+      <item>
+        <title>spark introduction</title>
+        <description>&lt;h3&gt;WHY SPARK&lt;/h3&gt;
+
+&lt;h4&gt;spark vs hadoop MR&lt;/h4&gt;
+
+&lt;p&gt;记得之前有被问到：Map Reduce为什么这么慢？之前的理解是shuffle阶段的IO和MR的执行过程所致。最近看到一篇文章(&lt;a href=&quot;http://jerryshao.me/architecture/2013/04/15/%E4%BC%A0%E7%BB%9F%E7%9A%84MapReduce%E6%A1%86%E6%9E%B6%E6%85%A2%E5%9C%A8%E5%93%AA%E9%87%8C/&quot;&gt;为什么之前的MapReduce系统比较慢&lt;/a&gt;)。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;既然hadoop MR慢，那肯定会有大神站出来。dadada! SPARK就这样出来了。同样是Map Reduce流程的实现，那SPARK快在哪？最重要的区别是，不同于hadoop MR每个job的输出结果必须保存在磁盘中，SPARK可以保存在内存中(SPARK不用把中间结果保存在HDFS上，Spark有自己的存储系统)。对于迭代式的job chain，SPARK就显得快很多了。&lt;/p&gt;
+
+&lt;h4&gt;spark vs storm&lt;/h4&gt;
+
+&lt;p&gt;刚开始以为storm focus on流式计算， 而spark则擅长于迭代式计算，二者专注于不同的领域，所以没有什么可比性。但是spark推出了实时module： spark streaming，这样storm在实时领域就不那么孤单了。虽然现在spark streaming应用不多，但是潜力还是有的&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;hadoop生态系统为靠山。现在大多数公司的大数据都是基于hadoop生态。而spark本身就是hadoop生态的一员，spark streaming和hadoop生态系统数据库的无缝结合会使得越来越多的公司选择spark streaming。&lt;/li&gt;
+&lt;li&gt;简单。个人认为读懂scala的代码比clojure容易多了。（虽然jstorm挤进了apache）&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;Spark sql vs hive&lt;/h4&gt;
+
+&lt;p&gt;两个不同的工具做了同样一件事，不同的是Spark sql基于spark，hive基于hadoop MR。当然，Spark sql 更快！&lt;/p&gt;
+
+&lt;h3&gt;Spark Architecture&lt;/h3&gt;
+
+&lt;p&gt;几个比较重要的module&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;core，spark核心&lt;/li&gt;
+&lt;li&gt;graphx，图算法模块(bagel的官方建议替代包)&lt;/li&gt;
+&lt;li&gt;mllib，机器学习模块&lt;/li&gt;
+&lt;li&gt;streaming，实时计算模块&lt;/li&gt;
+&lt;li&gt;yarn，和yarn整合模块，实现了yarn的ApplicationMaster和clinet&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;spark core&lt;/h4&gt;
+
+&lt;p&gt;Spark core有以下几个主要的子模块&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;deploy， SPARK application和资源调度系统&lt;/li&gt;
+&lt;li&gt;scheduler， app内tasks的调度系统&lt;/li&gt;
+&lt;li&gt;rdd， 分布式数据模型&lt;/li&gt;
+&lt;li&gt;storage， Spark自己的存储系统&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;由于调度和存储都是分布式的，所以deploy和storage模块都采用master-slave模式。&lt;/p&gt;
+
+&lt;h4&gt;spark mllib&lt;/h4&gt;
+
+&lt;p&gt;实现的算法虽然不多，也没看懂多少。但是，看完后只有一个感觉：真他妈简洁！&lt;/p&gt;
+
+&lt;h4&gt;spark shuffle&lt;/h4&gt;
+
+&lt;p&gt;关于spark shuffle，&lt;a href=&quot;http://jerryshao.me/architecture/2014/01/04/spark-shuffle-detail-investigation/&quot;&gt;这篇文章&lt;/a&gt;已经讲的很详细了。 记得之前碰到过一个问题，因为嫌MR shuffle慢，想要把shuffle阶段的sort disable掉。后来发现这是MR的必须阶段，所以觉得有点坑。reducer拿完所有mapper的数据后，又重新对所有数据做了次外排(merge sort)。其实大多数reducer并不需要key有序，只需要相同key的value相邻就可以了。当时就想到一个hashmap就可以解决，没想到spark居然真是这么做的。虽然遇到了内存问题，个人觉得还是能适应大多数场景(哪来那么多数据总是撑爆内存)。&lt;/p&gt;
+
+&lt;h4&gt;spark streaming&lt;/h4&gt;
+
+&lt;p&gt;// TODO&lt;/p&gt;
+
+&lt;h4&gt;spark RDD&lt;/h4&gt;
+
+&lt;p&gt;// TODO&lt;/p&gt;
+
+&lt;h3&gt;参考资料&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://tech.uc.cn/?p=2116&quot;&gt;Spark：一个高效的分布式计算系统&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://jerryshao.me/architecture/2013/03/29/spark-overview/&quot;&gt;Spark Overview&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Tue, 22 Apr 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/04/22/spark-intro/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/04/22/spark-intro/</guid>
+        
+        
+        <category>spark</category>
+        
+      </item>
+    
+      <item>
+        <title>Prediction with lm in R</title>
+        <description>&lt;p&gt;最近工作中需要用R的lm模型做一个预测的任务。&lt;/p&gt;
+
+&lt;p&gt;其实写完第一句话，我就意识到问题出在哪了。我其实还没完全弄明白在这个task的goal，甚至连数据为什么会这样都不知道，可是却按着ppt从准备数据到建模，一气呵成。等到把参数发出去，结果可想而知。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;先陈述下背景。我们想预测一次售卖活动的售卖金额&lt;em&gt;S&lt;/em&gt;。所以定义了几个影响&lt;em&gt;S&lt;/em&gt;的因素 &lt;em&gt;f1&lt;/em&gt;,&lt;em&gt;f2&lt;/em&gt;,&lt;em&gt;f3&lt;/em&gt;...。 lm模型这里就不多阐述了:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;S ~ b + a1 * f1 +  a2 * f2 + a3 * f3...
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;下面是在R中跑出的结果：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Residuals:
+Min    1Q    Median    3Q    Max 
+-24767.2      -433.9    -39.6     404.9          18809.9
+Coefficients:
+               Estimate    Std. Error      t value    Pr(&gt;|t|) 
+(Intercept)   -4.677e+02    8.971e+01    -5.214    1.85e-07       ***
+f1             1.587e+02     9.262e+01    1.714    1.04e-03       **
+f2             3.935e+02    3.209e+02     1.226    0.220087       .
+...
+---
+Signif. codes: 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Residual standard error: 1415 on 61902 degrees of freedom
+Multiple R-squared: 0.7853, Adjusted R-squared: 0.7852 
+F-statistic: 5392 on 42 and 61902 DF, p-value: &lt; 2.2e-16
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;解释下结果：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Residuals（残差）, 是指实际S与预测S的差值分布（最大，最小及各分位数）&lt;/li&gt;
+&lt;li&gt;Std. Error（标准误差）&lt;/li&gt;
+&lt;li&gt;T值, 检验解释变量的显著性&lt;/li&gt;
+&lt;li&gt;Pr(&gt;|t|), 即P值。判断方程整体的显著性，当P值 &amp;lt;0.05 可认为方程通过显著性检验&lt;/li&gt;
+&lt;li&gt;Multiple R-squared（R方值），显示方程拟合程度，即该模型可以解释78.5%的数据&lt;/li&gt;
+&lt;li&gt;F-statistic（F检验），检验方程整体显著性&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;模型的结果看上去还不错，可是交给运营的时候反馈却很差。按原话说就是 &#39;这预测出来的都是什么东西！&#39;。我只能呵呵了。因为从开始做的时候我就不知道怎么去评价结果的好坏，我能看到的只有上面那几个参数。当然跟运营没有沟通只是很小的一个原因，我觉得最大的问题是我没有明白我在做什么！&lt;/p&gt;
+
+&lt;p&gt;我不知道&lt;em&gt;f1&lt;/em&gt;,&lt;em&gt;f2&lt;/em&gt;,&lt;em&gt;f3&lt;/em&gt;...和&lt;em&gt;S&lt;/em&gt;之间是否是因果关系(当然这对模型来说不重要)。或者退一步说，&lt;em&gt;S&lt;/em&gt; 和 &lt;em&gt;fi&lt;/em&gt; 之间是不是存在某种巧合的联系(所以模型的结果看上去会不错)。预测结果这么差是不是因为数据量太小或者已经过拟合了。 这些我都没法回答， 但我知道的是我在试图用手上的数据将&lt;em&gt;S&lt;/em&gt; 和 &lt;em&gt;fi&lt;/em&gt;联系起来。预测结果差只能说明这条路错了或者我少做了什么...&lt;/p&gt;
+
+&lt;p&gt;之后我们换了一个更简单的办法，我们发现&lt;em&gt;S&lt;/em&gt;自身的趋势图呈现出很大的规律性。 所以我们干脆用 &lt;em&gt;S(i-1)&lt;/em&gt;,&lt;em&gt;S(i-2)&lt;/em&gt;,&lt;em&gt;S(i-3)&lt;/em&gt; 去预测 &lt;em&gt;S(i)&lt;/em&gt;：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;S(i) ~ b + a1 * S(i-1) + a2 * S(i-2) + a3 * S(i-3)
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;当运营说结果很好的时候，我又呵呵了一下...&lt;/p&gt;
+</description>
+        <pubDate>Mon, 14 Apr 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/04/14/r-lm/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/04/14/r-lm/</guid>
+        
+        
+        <category>algorithm</category>
+        
+      </item>
+    
+      <item>
+        <title>hive session</title>
+        <description>&lt;h3&gt;概述&lt;/h3&gt;
+
+&lt;p&gt;简而言之， hive就是封装了一套map reduce程序的tool， 它将类sql解释成 mr job流去完成既定的etl工作。 所以hive的优势有两个&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;ul&gt;
+&lt;li&gt;继承于hdfs, mr的所有优势&lt;/li&gt;
+&lt;li&gt;几乎可以忽略的学习成本，因为会sql的人实在是太多了
+
+&lt;h3&gt;结构&lt;/h3&gt;&lt;/li&gt;
+&lt;li&gt;用户接口，包括 CLI(命令行)，Client()，WUI&lt;/li&gt;
+&lt;li&gt;元数据存储，通常是存储在关系数据库如 mysql, derby 中&lt;/li&gt;
+&lt;li&gt;解释器、编译器、优化器、执行器&lt;/li&gt;
+&lt;li&gt;Hadoop：用 HDFS 进行存储，利用 MapReduce 进行计算。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;img src=&quot;/images/hadoop/hive_arc.jpg&quot; alt=&quot;hive&quot; /&gt;&lt;/p&gt;
+
+&lt;h3&gt;HQL&lt;/h3&gt;
+
+&lt;h5&gt;join&lt;/h5&gt;
+
+&lt;ul&gt;
+&lt;li&gt;join时驱动表会进内存。所以join操作选小表做驱动表(左边)&lt;/li&gt;
+&lt;li&gt;where操作会在join之后执行，多join， on应跟在每个join后面&lt;/li&gt;
+&lt;li&gt;join可以在map阶段完成，不需要reduce操作。 所以当关联操作中有一张表很小，或者有不等值的join时适用map join。&lt;em&gt;需要注意的是，hive0.11后默认会开启MAP JOIN，即hive会根据数据分布自行判断是否执行MAP JOIN。但是当数据量比较大的时候，许多涉及group by等操作的方法(row_number函数等)都有OOM的风险。 解决办法：&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;pre&gt;&lt;code&gt;set hive.auto.convert.join=false;&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;关于几种join可参考&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://my.oschina.net/leejun2005/blog/82523&quot;&gt;几种 hive join 类型简介&lt;/a&gt;&lt;/p&gt;
+
+&lt;h5&gt;by&lt;/h5&gt;
+
+&lt;ul&gt;
+&lt;li&gt;distribute by 数据分配到不同reducer&lt;/li&gt;
+&lt;li&gt;order by  最终通过一个reducer全局排序&lt;/li&gt;
+&lt;li&gt;sort by 单机排序&lt;/li&gt;
+&lt;li&gt;cluster by = distribute by + sort by&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;FUNCTION&lt;/h3&gt;
+
+&lt;h5&gt;percentile(BIGINT col, p)&lt;/h5&gt;
+
+&lt;p&gt;百分位数函数。返回column col(只支持BIGINT字段)的p%位数。如求中位数：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;SELECT percentile(age, 0.5) from student;&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;h5&gt;lag/lead(col, offset, default) over(partition by col order by col)&lt;/h5&gt;
+
+&lt;p&gt;获取结果集中，按一定排序所排列的当前行的上下相邻若干&lt;em&gt;offset&lt;/em&gt;的某个行的某个 &lt;em&gt;col&lt;/em&gt; ， 超出记录窗口时的默认值为&lt;em&gt;default&lt;/em&gt;&lt;/p&gt;
+
+&lt;h5&gt;row_number() over(partition by col order by col)&lt;/h5&gt;
+
+&lt;p&gt;根据over()条件分区排序后标记记录顺序。&lt;/p&gt;
+
+&lt;h3&gt;NOTE&lt;/h3&gt;
+
+&lt;h5&gt;Dynamic Partition&lt;/h5&gt;
+
+&lt;p&gt;表增加分区后需要还原之前的数据，所以用动态分区一次导入。&lt;/p&gt;
+
+&lt;p&gt;设置&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;set hive.exec.dynamic.partition=true;
+set hive.exec.dynamic.partition.mode=nonstrict; 
+SET hive.exec.max.dynamic.partitions=100000;//总分区数
+SET hive.exec.max.dynamic.partitions.pernode=1000;//单机分区数&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;导入&lt;pre&gt;&lt;code&gt;insert overwrite ... day partiton(dt, pltfrm)   select ....., dt, &#39;web&#39; pltform from ....&lt;/code&gt;&lt;/pre&gt;&lt;/p&gt;
+
+&lt;h5&gt;权限&lt;/h5&gt;
+
+&lt;p&gt;hive权限控制比较简单，目的只是防止用户不小心做了不该做的事。&lt;/p&gt;
+
+&lt;p&gt;首先介绍三个概念：user，group，role。 user和group可以参考linux系统的user和group。而role则像是若干权限的集合。然后你可以将role grant给group或者user。当然，你也可以直接把权限grant、revoke给group或者user。role只是会让你少做很多事。&lt;/p&gt;
+
+&lt;p&gt;配置：&lt;/p&gt;
+
+&lt;pre&gt;&amp;lt;property&amp;gt; 
+&amp;lt;name&amp;gt;hive.metastore.authorization.storage.checks&amp;lt;/name&amp;gt;  
+    &amp;lt;value&amp;gt;true&amp;lt;/value&amp;gt; 
+&amp;lt;/property&amp;gt;  
+&amp;lt;property&amp;gt; 
+    &amp;lt;name&amp;gt;hive.metastore.execute.setugi&amp;lt;/name&amp;gt;  
+    &amp;lt;value&amp;gt;false&amp;lt;/value&amp;gt; 
+&amp;lt;/property&amp;gt;  
+&amp;lt;property&amp;gt; 
+    &amp;lt;name&amp;gt;hive.security.authorization.enabled&amp;lt;/name&amp;gt;  
+    &amp;lt;value&amp;gt;true&amp;lt;/value&amp;gt; 
+&amp;lt;/property&amp;gt;
+&amp;lt;property&amp;gt;
+    &amp;lt;name&amp;gt;hive.security.authorization.createtable.owner.grants&amp;lt;/name&amp;gt;  
+    &amp;lt;value&amp;gt;ALL&amp;lt;/value&amp;gt; 
+&amp;lt;/property&amp;gt; 
+&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;/p&gt;
+
+&lt;p&gt;当然还要加上超级管理员，不然所以用户都可以进行grant、revoke操作。添加超级管理员，hive需要你自己继承 &lt;em&gt;AbstractSemanticAnalyzerHook&lt;/em&gt;：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class YourHook extends AbstractSemanticAnalyzerHook {
+     @Override
+     public ASTNode preAnalyze(HiveSemanticAnalyzerHookContext context,
+         ASTNode ast) throws SemanticException {
+        ....
+     }
+}&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;并在&lt;em&gt;hive-site.xml&lt;/em&gt;加上&lt;/p&gt;
+
+&lt;pre&gt;&amp;lt;property&amp;gt; 
+    &amp;lt;name&amp;gt;hive.semantic.analyzer.hook&amp;lt;/name&amp;gt; 
+    &amp;lt;value&amp;gt;com.xxx.AuthHook&amp;lt;/value&amp;gt;  
+&amp;lt;/property&amp;gt;
+&lt;/pre&gt;
+
+
+&lt;p&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sat, 12 Apr 2014 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2014/04/12/note-hive/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2014/04/12/note-hive/</guid>
+        
+        
+        <category>hadoop</category>
+        
+      </item>
+    
+      <item>
+        <title>十一黄山看人记</title>
+        <description>&lt;p&gt;阶哥，还记得去年十一黄山上的那两天么。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;&lt;img src=&quot;/images/travel/yellow_mountain/y_1.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_2.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_3.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_4.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_5.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_6.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_8.jpg&quot; alt=&quot;&quot; /&gt;
+&lt;img src=&quot;/images/travel/yellow_mountain/y_7.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+</description>
+        <pubDate>Tue, 01 Oct 2013 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2013/10/01/yellow_mountain/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2013/10/01/yellow_mountain/</guid>
+        
+        
+        <category>travel</category>
+        
+      </item>
+    
+      <item>
+        <title>豆瓣读书推荐</title>
+        <description>&lt;p&gt;之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;豆瓣读书的推荐主要有两个页面：
+&lt;br /&gt;
+一个是每本书的主页， 比如梁文道的&lt;a href=&quot;http://book.douban.com/subject/4031698/&quot;&gt;读者&lt;/a&gt;。豆瓣会有一个推荐的section: &lt;em&gt;喜欢读&quot;读者&quot;的人也喜欢...&lt;/em&gt;。 这句话似乎是说推荐是基于&lt;strong&gt;协同过滤&lt;/strong&gt;的。我很奇怪为什么豆瓣会用这样的标题，这里明显不会是基于协同的推荐， 因为我用不同的用户登录， 推荐的结果是一样的。从推荐的结果来也像是&lt;strong&gt;content based&lt;/strong&gt;， 更准确点是&lt;strong&gt;tag-based&lt;/strong&gt;。 因为推荐的大多还是梁文道的书，还有些书tag是&lt;em&gt;随笔&lt;/em&gt;、&lt;em&gt;文化&lt;/em&gt;什么的。
+&lt;br /&gt;
+另一个是&lt;a href=&quot;http://book.douban.com/recommended&quot;&gt;豆瓣猜&lt;/a&gt;。首先会列出你可能感兴趣的新书。之后是你可能感兴趣的tag和book。这里应该是混合推荐了。
+&lt;br /&gt;
+当然，这都是猜想。试试看吧。&lt;/p&gt;
+
+&lt;h4&gt;Warm-up&lt;/h4&gt;
+
+&lt;p&gt;先解释下数据模型，爬的数据有people，book，tag以及相互的对应关系。构建三个matrix就可以将三者联系起来了。如图:
+&lt;br /&gt;
+&lt;img src=&quot;/images/recommendation/douban_model.jpg&quot; alt=&quot;data model&quot; /&gt;
+&lt;br /&gt;
+再说明下， 所有的算法都是based on mahout。&lt;/p&gt;
+
+&lt;h4&gt;tag-based&lt;/h4&gt;
+
+&lt;p&gt;给定一本书， 找到一本tag相似的书。可以把book-tag matrix作input，这样tag就相当于book的dimension, 可以用&lt;em&gt;PearsonCorrelationSimilarity&lt;/em&gt;， 即皮尔逊系数来衡量book之间的距离。这样找相似的书， 即找最近的邻居：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;
+UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(getHowMany(), similarity, model);
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;但是推荐的结果不尽人意。想到之前微博推荐的经验， 可以先对book根据book-tag matrix&lt;strong&gt;聚类&lt;/strong&gt;，再在每个cluster里找邻居，这样可以消除一些离群点的影响。看结果：
+&lt;br /&gt;
+&lt;br /&gt;
+&lt;img src=&quot;/images/recommendation/rec_douban_tag.jpg&quot; alt=&quot;data model&quot; /&gt;
+&lt;br /&gt;
+&lt;br /&gt;
+可以看到推荐的结果有&lt;a href=&quot;http://book.douban.com/subject/3644791/&quot;&gt;噪音太多&lt;/a&gt;、&lt;a href=&quot;http://book.douban.com/subject/1831760/&quot;&gt;弱水三千&lt;/a&gt;...&lt;/p&gt;
+
+&lt;h4&gt;协同过滤&lt;/h4&gt;
+
+&lt;p&gt;协同过滤， 说白了也是在people-book matrix里找邻居。不同的是user-based collaborative filtering是把book当成people的dimension。而item-based collaborative filtering则反过来。这里仍然用&lt;em&gt;PearsonCorrelationSimilarity&lt;/em&gt;来衡量相似度：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;
+UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(numNeighbor, similarity, model);
+Recommender recommender = new GenericUserBasedRecommender(model, neighbors, similarity);
+&lt;/code&gt;&lt;/pre&gt;
+
+
+&lt;p&gt;很遗憾没有爬到自己的账号。随便选个账号来测试，结果：
+&lt;br /&gt;
+&lt;br /&gt;
+item-based
+&lt;img src=&quot;/images/recommendation/rec_douban_item.jpg&quot; alt=&quot;data model&quot; /&gt;
+&lt;br /&gt;
+&lt;br /&gt;
+user-based
+&lt;img src=&quot;/images/recommendation/rec_douban_user.jpg&quot; alt=&quot;data model&quot; /&gt;
+&lt;br /&gt;
+&lt;br /&gt;
+因为爬到的数据不多， 本来就稀疏的matrix交集更少。推荐出来的结果都是些可能看过一两本相同书的people给出的推荐。这也反映出协同过滤的cold start问题。不知道豆瓣是怎样解决的。
+&lt;br /&gt;
+&lt;br /&gt;
+同上，我也试着对people根据people-tag matrix先聚类再做item-based collaborative filtering。推荐出来的比较像tag-based的结果。&lt;/p&gt;
+
+&lt;h4&gt;new book recommendation&lt;/h4&gt;
+
+&lt;p&gt;豆瓣还有个推荐新书的功能。根据爬到的数据，我能想到的方法就是计算people的历史tag跟新书tag之间distance，选距离最近的people。但是这时的距离应该是什么呢？ EuclideanDistance？试了下， 结果比较无语，因为推荐出来的都是些过分活跃的用户-那些所有tag都有比较大的weight的用户。
+&lt;br /&gt;
+&lt;br /&gt;
+其实这也可以理解， content based必然会有热门问题，比如豆瓣的tag-based推荐，像&lt;em&gt;文学&lt;/em&gt;、&lt;em&gt;小说&lt;/em&gt;这样的tag就比较泛滥。 所以很多文学类小说的推荐常常会被几本热门的名著占据。 按理说豆瓣应该会对tag清理过，不明白为什么还是会有这样的问题。
+&lt;br /&gt;
+&lt;br /&gt;
+显然要换个距离， 欧式距离会计算所有tag间的距离，是否可以让距离只考虑新书的tag在people上的weight。想到了对people向量做横向归一处理，这样就消除了热门tag对people的影响，也就能找到新书的tag占最大weigh的people。 看结果:
+&lt;br /&gt;
+&lt;img src=&quot;/images/recommendation/rec_douban_new.jpg&quot; alt=&quot;data model&quot; /&gt;
+&lt;br /&gt;
+&lt;br /&gt;
+这样就为&lt;a href=&quot;http://book.douban.com/subject/1041007/&quot;&gt;哈利·波特与魔法石&lt;/a&gt;找到了用户&lt;a href=&quot;http://book.douban.com/people/tuzicxy/collect&quot;&gt;tuzicxy&lt;/a&gt;、&lt;a href=&quot;http://book.douban.com/people/70621573/collect&quot;&gt;70621573&lt;/a&gt;...&lt;/p&gt;
+</description>
+        <pubDate>Fri, 16 Aug 2013 00:00:00 +0800</pubDate>
+        <link>http://dannyhnu.github.io/2013/08/16/recommendation-douban/</link>
+        <guid isPermaLink="true">http://dannyhnu.github.io/2013/08/16/recommendation-douban/</guid>
+        
+        
+        <category>algorithm</category>
+        
+      </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>machine learning 笔记</title>
+    <meta name="description" content="接触machine learning一年多了 也攒了不少笔记 话说期间各种算法都有接触过 分类 聚类  推荐 降维...  或许是research的不够深入的原因吧  我发现其实大多数算法都可以用一句话概况">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/2013/07/10/note-ml/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>machine learning 笔记</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2013-07-10
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#algorithm" title="Category: algorithm" rel="category">algorithm</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>接触<strong>machine learning</strong>一年多了 也攒了不少笔记 话说期间各种算法都有接触过 分类 聚类  推荐 降维...  或许是research的不够深入的原因吧  我发现其实大多数算法都可以用一句话概况</p>
+
+<!-- more -->
+
+
+<p><br /></p>
+
+<h4>分类</h4>
+
+<h5>Bayesian</h5>
+
+<p>最有可能属于哪一类
+<br />
+<img src="/images/note/ml/bayesian.jpg" alt="bayesian" /></p>
+
+<h5>SVM</h5>
+
+<p>找出一个能划分两个类的超平面
+<br />
+<img src="/images/note/ml/svm.jpg" alt="SVM" /></p>
+
+<h5>Decision tree</h5>
+
+<p>每个枝上选一个维度去划分节点上的所有样本
+<br />
+<img src="/images/note/ml/dt.jpg" alt="decision tree" /></p>
+
+<h5>ANN</h5>
+
+<p>函数黑盒  这个似乎有点高深  现在也不知道能不能再推出来
+<br />
+<img src="/images/note/ml/ann_1.jpg" alt="ANN" />
+<br />
+<img src="/images/note/ml/ann_2.jpg" alt="ANN" /></p>
+
+<h4>距离</h4>
+
+<p>各种距离  最常用的是欧式和余弦  可能根据应用场景的不同有些差异  比如 点 p(5, 5), p(1, 1) 和 p(0, 0)之间的距离。 这种差异可以通过归一化来handle
+<br />
+<img src="/images/note/ml/dis.jpg" alt="distance" /></p>
+
+<h4>聚类</h4>
+
+<h5>kmeans</h5>
+
+<p>最基础的聚类算法  <em>选中心点</em>  <em>不停的迭代</em>
+<br />
+<img src="/images/note/ml/kmeans.jpg" alt="kmeans" /></p>
+
+<h5>Spectral</h5>
+
+<p>谱聚类
+<br />
+<img src="/images/note/ml/spectral_1.jpg" alt="spectral" />
+<br />
+<img src="/images/note/ml/spectral_2.jpg" alt="spectral" /></p>
+
+<h4>降维</h4>
+
+<p>LDA是监督学习  将不同的样本映射到<em>sub space</em>上  使得不同label之间的方差最大化 但是同一label内的样本尽量靠近各自的中心
+<br />
+PCA是无监督学习  也是将所有样本映射到<em>sub space</em>上 不同的是降维后使得所有样本的方程最大化
+<br />
+<img src="/images/note/ml/pca_1.jpg" alt="pca" />
+<br />
+<img src="/images/note/ml/pca_2.jpg" alt="pca" /></p>
+
+<h4>推荐</h4>
+
+<p>基于内容的  基于协同的  还有关联规则的</p>
+
+<h5>关联规则</h5>
+
+<p><em>支持度</em>  <em>置信度</em> <em>频繁项集</em>
+<br />
+<img src="/images/note/ml/asso.jpg" alt="asso" /></p>
+
+<h5>条件概率</h5>
+
+<p>阿里技术博客上看到的 很简单的based on<strong>条件概率</strong>的 推荐
+<br />
+<img src="/images/note/ml/rec_ali.jpg" alt="ali" /></p>
+
+<h4>Note</h4>
+
+<p>不记得哪里看到的一条机器学习的三维
+<br />
+<img src="/images/note/ml/ml_3.jpg" alt="note" /></p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2013/07/10/note-ml/" data-title="machine learning 笔记" data-url="http://dannyhnu.github.io/2013/07/10/note-ml/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>

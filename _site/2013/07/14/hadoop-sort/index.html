@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>hadoop sort问题</title>
+    <meta name="description" content="项目组最近遇到一个hadoop(1.2)问题,因为map中产生的key太多,导致job花费了大量时间在map的shuffle上。准确来说时间应该都花在了IO上面，map产生的数据过多，使得shuffle阶段IO操作过多。 当然因为db设计的原因，map数据过大也是必然的事。  纵观Mapreduce的shuffl...">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/2013/07/14/hadoop-sort/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>hadoop sort问题</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2013-07-14
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#hadoop" title="Category: hadoop" rel="category">hadoop</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>项目组最近遇到一个hadoop(1.2)问题,因为map中产生的key太多,导致job花费了大量时间在map的shuffle上。准确来说时间应该都花在了IO上面，map产生的数据过多，使得shuffle阶段IO操作过多。 当然因为db设计的原因，map数据过大也是必然的事。  纵观Mapreduce的shuffle过程： sort、 IO 、merge， 似乎也只有sort还有优化的可能。</p>
+
+<!-- more -->
+
+
+<p><br />
+<br />
+这里先跑下题 Mapreduce本是一个聚合的过程, 但是因为后台db采用了星形的架构 使得map将数据发散到一个更广的空间中。 key多的点让人觉得不可理喻。 或许这种设计本身就不适合用Mapreduce来做ETL。
+<br />
+<br />
+言归正传，于是项目组决定对Mapreduce的排序进行优化。 下面是优化的笔记：
+<br />
+<br />
+Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如图， 首先将输出写到缓存当中。 当缓存大小达到“阈值”时（默认的大小是缓存的80%），  变会进行'spill'： 即sort and combiner。  sort完才会把数据写进磁盘。  坑爹的是，  根据Mapreduce的设计(hadoop1.2)， sort是个无法避免的过程。
+<br />
+<img src="/images/hadoop/map_shuffle.jpg" alt="map" /></p>
+
+<p>而在sort的过程中， 由于hadoop往缓存中写入的不是对象， 而是序列化以后的二进制数据。 所以在WritableComparator中， 会首先将这些二进制数据反序列化为对象， 然后再调用这些对象的compareTo方法进行比较：</p>
+
+<pre><code>public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+  try {
+    buffer.reset(b1, s1, l1);                   // parse key1
+    key1.readFields(buffer);
+  
+    buffer.reset(b2, s2, l2);                   // parse key2
+    key2.readFields(buffer);
+  
+  } catch (IOException e) {
+    throw new RuntimeException(e);
+  }
+  return compare(key1, key2);                   // compare them
+}
+</code></pre>
+
+
+<p>所以说， 每次compare的过程都会有两个反序列化的过程。 当然还好hadoop留了一条后路， Job对象上有一个方法：</p>
+
+<pre><code>setSortComparatorClass(RawComparator c)
+</code></pre>
+
+
+<p>这样我们就能避免反序列化过程了：</p>
+
+<pre><code>public class SampleComparator implements RawComparator{
+  private Logger logger = Logger.getLogger(SampleComparator.class);
+
+  @Override
+  public int compare(Object o1, Object o2) {
+    logger.error("SampleComparator does not support method compare(Object o1, Object o2)!");
+    throw new RuntimeException("unsupported method!");
+  }
+
+  @Override
+  public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+    return WritableComparator.compareBytes(b1, s1, l1, b2, s2, l2);
+  }
+}
+</code></pre>
+
+
+<p>当然， 进行这种修改的时候一定要确保是否序列化对排序结果没有影响。</p>
+
+<h5>附</h5>
+
+<p>顺便记一下最近看到的一个问题：
+ 为什么hadoop不适合做实时计算？ 个人的感觉主要是IO太多， 再加上启动时间、 网络传输等因素 ，就决定了hadoop在实时这个领域难有作为。
+<br />storm就不一样，数据都是在内存中， task一直在监听数据， 除非kill掉(下次系统看下storm)</p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2013/07/14/hadoop-sort/" data-title="hadoop sort问题" data-url="http://dannyhnu.github.io/2013/07/14/hadoop-sort/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>

@@ -1,0 +1,48 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely need to edit after that.
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+title: Dan
+brief-intro: 
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "http://dannyhnu.github.io" # the base hostname & protocol for your site
+
+permalink: /:year/:month/:day/:title/
+
+# other links
+# twitter_username: dannyhnu
+# facebook_username: dannyhnu
+github_username:  dannyhnu
+email: dannyhnu@126.com
+weibo_username: dan
+
+description_footer: Simple is powerful!
+
+# comments
+duoshuo_shortname: dannyhnu
+#disqus_shortname: 
+
+# statistic analysis 统计代码
+baidu_tongji_id: 
+google_analytics_id: UA-50349546-1 # google 分析追踪id
+
+# Build settings
+markdown: rdiscount
+
+# port
+# port: 1234
+
+# url
+category_dir: category/
+tag_dir: tag/
+
+# excerpt
+excerpt_separator: "<!-- more -->"
+
+# paginate
+gems: [jekyll-paginate]
+paginate: 5

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Dan</title>
+    <meta name="description" content="">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a class="active" href="/">
+                        
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" index>
+    <div class="left">
+        <ul>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2016-05-16
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过<strong>spark broadcast</strong>广播到各个executor进行rdd map join。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2016/05/16/spark-broadcast/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2014/07/06/KAFKA-intro/">kafka</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2014-07-06
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#queue" title="Category: queue" rel="category">queue</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>官方是这样定义 KAFKA 的:</p>
+
+<blockquote><p>Kafka is a distributed, partitioned, replicated commit log service. It provides the functionality of a messaging system, but with a unique design.</p></blockquote>
+
+<p>一个分布式、可分区、基于备份的日志服务，可提供消息队列服务，却和传统的JMS有着不同的设计。这就是 Apache Kafka。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2014/07/06/KAFKA-intro/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2014/05/13/spark-ml-clustering/">spark ML - CLSUTERING </a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2014-05-13
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>首先我想吐槽下。 相比mahout，spark ML包组织架构有点不忍直视。</p>
+
+<ul>
+<li>没有统一的数据结构。而且借用了两套三方linear algebra库: <a href="http://mikiobraun.github.io/jblas/">jblas</a> 和 <a href="https://github.com/scalanlp/breeze/wiki/Breeze-Linear-Algebra">Breeze</a>。 借用jblas是由于其强大的矩阵计算能力。 而Breeze我怀疑是因为spark的一些作者恰好也是Breeze的贡献者。</li>
+<li>没有抽象的距离类。可能因为目前没有涉及太多向量距离的算法，所以目前只有 <em>KMEANS</em> 有一个 <em>fastSquaredDistance</em>。 更坑爹的是这个距离算法写在了 <em>MLUtils</em> 这个莫名其妙的类里。当然，等数据结构统一后，这个问题自然迎刃而解了。</li>
+</ul>
+
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2014/05/13/spark-ml-clustering/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2014/05/11/mysql-lfx-share/">mysql session</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2014-05-11
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#db" title="Category: db" rel="category">db</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>先介绍下session的主讲。<a href="http://www.anysql.net/">楼方鑫</a>, 大牛。</p>
+
+<p>好吧， 其实没怎么听懂啦，就是感觉很牛逼的样子，所以这里记一下大概的意思咯。而且刚从嵊泗看(dou)完(di)海(zhu)回来，身心俱疲，很有可能会胡说八道。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2014/05/11/mysql-lfx-share/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2014/05/06/spark-ml-classfication/">spark ML源码 - CLASSIFICATION</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2014-05-06
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <h3>SUMMARY</h3>
+
+<p>Spark classification在当前的release版本(0.9)上只实现了Naive Bayes、LogisticRegression、SVM。而在<a href="https://github.com/apache/spark/tree/master/mllib/src/main/scala/org/apache/spark/mllib/classification">开发分支</a>上也没有看到有其他算法的计划。这篇文章的代码都是截取自最新的开发分支(branch 1.0)。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2014/05/06/spark-ml-classfication/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+        </ul>
+
+
+
+        <!-- Pagination links -->
+        <div class="pagination">
+          
+            <span class="previous disable"><i class="fa fa-angle-double-left"></i></span>
+            <span class="previous disable"><i class="fa fa-angle-left"></i></span>
+          
+          <span class="page_number ">1/4</span>
+          
+            <a href="/page2" class="next"><i class="fa fa-angle-right"></i></a>
+            <a href="/page4" class="next"><i class="fa fa-angle-double-right"></i></a>
+          
+        </div>
+    </div>
+    <!-- <button class="anchor"><i class="fa fa-anchor"></i></button> -->
+    <div class="right">
+        <div class="wrap">
+            <div class="side">
+                <div>
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                    Recent Posts
+                </div>
+                <ul class="content-ul" recent>
+                    
+                        <li><a href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a></li>
+                    
+                        <li><a href="/2014/07/06/KAFKA-intro/">kafka</a></li>
+                    
+                        <li><a href="/2014/05/13/spark-ml-clustering/">spark ML - CLSUTERING </a></li>
+                    
+                        <li><a href="/2014/05/11/mysql-lfx-share/">mysql session</a></li>
+                    
+                        <li><a href="/2014/05/06/spark-ml-classfication/">spark ML源码 - CLASSIFICATION</a></li>
+                    
+                        <li><a href="/2014/04/22/spark-intro/">spark introduction</a></li>
+                    
+                        <li><a href="/2014/04/14/r-lm/">Prediction with lm in R</a></li>
+                    
+                        <li><a href="/2014/04/12/note-hive/">hive session</a></li>
+                    
+                        <li><a href="/2013/10/01/yellow_mountain/">十一黄山看人记</a></li>
+                    
+                        <li><a href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a></li>
+                    
+                </ul>
+            </div>
+
+            <!-- Content -->
+            <div class="side ">
+                <div>
+                    <i class="fa fa-th-list"></i>
+                    Categories
+                </div>
+                <ul class="content-ul" cate>
+                    
+                    <li>
+                        <a href="/category/#language" class="categories-list-item" cate="language">
+                            <span class="name">
+                                language
+                            </span>
+                            <span class="badge">1</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#algorithm" class="categories-list-item" cate="algorithm">
+                            <span class="name">
+                                algorithm
+                            </span>
+                            <span class="badge">5</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#travel" class="categories-list-item" cate="travel">
+                            <span class="name">
+                                travel
+                            </span>
+                            <span class="badge">2</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#hadoop" class="categories-list-item" cate="hadoop">
+                            <span class="name">
+                                hadoop
+                            </span>
+                            <span class="badge">2</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#spark" class="categories-list-item" cate="spark">
+                            <span class="name">
+                                spark
+                            </span>
+                            <span class="badge">4</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#db" class="categories-list-item" cate="db">
+                            <span class="name">
+                                db
+                            </span>
+                            <span class="badge">1</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#queue" class="categories-list-item" cate="queue">
+                            <span class="name">
+                                queue
+                            </span>
+                            <span class="badge">1</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <div class="side">
+                <div>
+                    <i class="fa fa-tags"></i>
+                    Tags
+                </div>
+                <div class="tags-cloud">
+                    
+                    
+                    
+                    
+                    
+
+                    
+                </div>
+            </div>
+
+            <!-- <div class="side">
+                <div>
+                    <i class="fa fa-external-link"></i>
+                    Links
+                </div>
+                <ul  class="content-ul">
+
+                </ul>
+            </div> -->
+        </div>
+    </div>
+</div>
+<script src="/js/scroll.min.js " charset="utf-8"></script> 
+<script src="/js/pageContent.js " charset="utf-8"></script> 
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>

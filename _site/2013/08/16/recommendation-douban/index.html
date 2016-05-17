@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>豆瓣读书推荐</title>
+    <meta name="description" content="之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/2013/08/16/recommendation-douban/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>豆瓣读书推荐</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2013-08-16
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#algorithm" title="Category: algorithm" rel="category">algorithm</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。</p>
+
+<!-- more -->
+
+
+<p>豆瓣读书的推荐主要有两个页面：
+<br />
+一个是每本书的主页， 比如梁文道的<a href="http://book.douban.com/subject/4031698/">读者</a>。豆瓣会有一个推荐的section: <em>喜欢读"读者"的人也喜欢...</em>。 这句话似乎是说推荐是基于<strong>协同过滤</strong>的。我很奇怪为什么豆瓣会用这样的标题，这里明显不会是基于协同的推荐， 因为我用不同的用户登录， 推荐的结果是一样的。从推荐的结果来也像是<strong>content based</strong>， 更准确点是<strong>tag-based</strong>。 因为推荐的大多还是梁文道的书，还有些书tag是<em>随笔</em>、<em>文化</em>什么的。
+<br />
+另一个是<a href="http://book.douban.com/recommended">豆瓣猜</a>。首先会列出你可能感兴趣的新书。之后是你可能感兴趣的tag和book。这里应该是混合推荐了。
+<br />
+当然，这都是猜想。试试看吧。</p>
+
+<h4>Warm-up</h4>
+
+<p>先解释下数据模型，爬的数据有people，book，tag以及相互的对应关系。构建三个matrix就可以将三者联系起来了。如图:
+<br />
+<img src="/images/recommendation/douban_model.jpg" alt="data model" />
+<br />
+再说明下， 所有的算法都是based on mahout。</p>
+
+<h4>tag-based</h4>
+
+<p>给定一本书， 找到一本tag相似的书。可以把book-tag matrix作input，这样tag就相当于book的dimension, 可以用<em>PearsonCorrelationSimilarity</em>， 即皮尔逊系数来衡量book之间的距离。这样找相似的书， 即找最近的邻居：</p>
+
+<pre><code>
+UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(getHowMany(), similarity, model);
+</code></pre>
+
+
+<p>但是推荐的结果不尽人意。想到之前微博推荐的经验， 可以先对book根据book-tag matrix<strong>聚类</strong>，再在每个cluster里找邻居，这样可以消除一些离群点的影响。看结果：
+<br />
+<br />
+<img src="/images/recommendation/rec_douban_tag.jpg" alt="data model" />
+<br />
+<br />
+可以看到推荐的结果有<a href="http://book.douban.com/subject/3644791/">噪音太多</a>、<a href="http://book.douban.com/subject/1831760/">弱水三千</a>...</p>
+
+<h4>协同过滤</h4>
+
+<p>协同过滤， 说白了也是在people-book matrix里找邻居。不同的是user-based collaborative filtering是把book当成people的dimension。而item-based collaborative filtering则反过来。这里仍然用<em>PearsonCorrelationSimilarity</em>来衡量相似度：</p>
+
+<pre><code>
+UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
+NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(numNeighbor, similarity, model);
+Recommender recommender = new GenericUserBasedRecommender(model, neighbors, similarity);
+</code></pre>
+
+
+<p>很遗憾没有爬到自己的账号。随便选个账号来测试，结果：
+<br />
+<br />
+item-based
+<img src="/images/recommendation/rec_douban_item.jpg" alt="data model" />
+<br />
+<br />
+user-based
+<img src="/images/recommendation/rec_douban_user.jpg" alt="data model" />
+<br />
+<br />
+因为爬到的数据不多， 本来就稀疏的matrix交集更少。推荐出来的结果都是些可能看过一两本相同书的people给出的推荐。这也反映出协同过滤的cold start问题。不知道豆瓣是怎样解决的。
+<br />
+<br />
+同上，我也试着对people根据people-tag matrix先聚类再做item-based collaborative filtering。推荐出来的比较像tag-based的结果。</p>
+
+<h4>new book recommendation</h4>
+
+<p>豆瓣还有个推荐新书的功能。根据爬到的数据，我能想到的方法就是计算people的历史tag跟新书tag之间distance，选距离最近的people。但是这时的距离应该是什么呢？ EuclideanDistance？试了下， 结果比较无语，因为推荐出来的都是些过分活跃的用户-那些所有tag都有比较大的weight的用户。
+<br />
+<br />
+其实这也可以理解， content based必然会有热门问题，比如豆瓣的tag-based推荐，像<em>文学</em>、<em>小说</em>这样的tag就比较泛滥。 所以很多文学类小说的推荐常常会被几本热门的名著占据。 按理说豆瓣应该会对tag清理过，不明白为什么还是会有这样的问题。
+<br />
+<br />
+显然要换个距离， 欧式距离会计算所有tag间的距离，是否可以让距离只考虑新书的tag在people上的weight。想到了对people向量做横向归一处理，这样就消除了热门tag对people的影响，也就能找到新书的tag占最大weigh的people。 看结果:
+<br />
+<img src="/images/recommendation/rec_douban_new.jpg" alt="data model" />
+<br />
+<br />
+这样就为<a href="http://book.douban.com/subject/1041007/">哈利·波特与魔法石</a>找到了用户<a href="http://book.douban.com/people/tuzicxy/collect">tuzicxy</a>、<a href="http://book.douban.com/people/70621573/collect">70621573</a>...</p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2013/08/16/recommendation-douban/" data-title="豆瓣读书推荐" data-url="http://dannyhnu.github.io/2013/08/16/recommendation-douban/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>
