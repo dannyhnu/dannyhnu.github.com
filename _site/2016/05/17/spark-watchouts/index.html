@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>spark  - 那些坑</title>
+    <meta name="description" content="JobProgressListener问题Spark Application跑一段时间总会被yarn kill掉，报的错是Container ... is running beyond physical memory limits. Current usage: xxx GB of xxx GB physical...">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/2016/05/17/spark-watchouts/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>spark  - 那些坑</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2016-05-17
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <h4>JobProgressListener</h4>
+
+<h6>问题</h6>
+
+<p>Spark Application跑一段时间总会被yarn kill掉，报的错是</p>
+
+<pre><code>Container ... is running beyond physical memory limits. Current usage: xxx GB of xxx GB physical memory used; xx GB of xx GB virtual memory used. Killing container.</code></pre>
+
+
+<!-- more -->
+
+
+<p>第一反应怀疑哪里有内存泄露，所以dump内存看了下，发现<strong>org.apache.spark.ui.jobs.JobProgressListener</strong>几乎占掉了一半的内存。于是看代码，发现<em>stageIdToData</em>和<em>jobIdToData</em>两个变量保存了所有的job信息和stage信息。好在有<em>trimStagesIfNecessary</em>和<em>trimJobsIfNecessary</em>两个方法，当job数或者stage数超过配置的数目，JobProgressListener会每次remove掉10%的job或者stage。</p>
+
+<h6>解决办法</h6>
+
+<pre><code>spark.ui.retainedJobs
+spark.ui.retainedStages</code></pre>
+
+
+<h4>Broadcast</h4>
+
+<h6>问题</h6>
+
+<p>使用broadcast的时候发现task耗费大量时间在<em>Task Deserialization Time</em>上，且当广播的变量越大task反序列化的时间也越大。于是看到<a href="http://dongguo.me/blog/2014/12/30/Spark-Usage-Share/">这篇文章</a>中提到的<em>正确地使用广播变量(broadcast variables)</em>时才发现自己在真正产生action的操作前就读取broadcast的变量，导致每次广播都会在driver收集变量然后分发给各个executor。这是问题代码（java）：</p>
+
+<pre><code>Function<Row, Row> mapFunc = new Function<Row, Row>() {
+    private Map<String, Double> joinMap = broadcastVal.getValue();
+    @Override
+    public Row call(Row row) throws Exception {
+        joinMap.get....
+    }
+}</code></pre>
+
+
+<h6>解决办法</h6>
+
+<p>在action方法内部调用<em>getValue()</em></p>
+
+<pre><code>Function<Row, Row> mapFunc = new Function<Row, Row>() {
+    @Override
+    public Row call(Row row) throws Exception {
+        Map<String, Double> joinMap = broadcastVal.getValue();
+        joinMap.get....
+    }
+}</code></pre>
+
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2016/05/17/spark-watchouts/" data-title="spark  - 那些坑" data-url="http://dannyhnu.github.io/2016/05/17/spark-watchouts/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>
