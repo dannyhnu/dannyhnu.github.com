@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>运营-监控方法笔记</title>
+    <meta name="description" content="我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://dannyhnu.github.io/2018/11/20/shark-monitor/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>运营-监控方法笔记</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2018-11-20
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#ops" title="Category: ops" rel="category">ops</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。</p>
+
+<!-- more -->
+
+
+<p><br /></p>
+
+<h2>监控需求</h2>
+
+<h3>实时性</h3>
+
+<p>从实时性上来区分，我们的监控场景主要可以分为天级（T+1）、小时级（H+1）、分钟级(M+1)。其中天级监控的场景主要是收入相关指标，比如ecpm、cpc等。这类曲线一般波动较小，且业务特性比较强。 而小时、分钟级监控的场景为广告实时流量，这类曲线波动大且不规律。</p>
+
+<h3>粒度</h3>
+
+<p>因为广告业务配置多而繁杂，单个维度的变化都能引起广告收入的波动。所以我们对实时流量做了全维度监控。</p>
+
+<h2>监控策略</h2>
+
+<p>Shark采用的监控策略可以分为常规方法、时间序列基线、相似波几种。
+* 组合策略: 一般对于波动比较大的监控场景，我们会采用几个策略的组合来判定是否异常。比如五个策略有三个判定异常则认定异常。<br>
+* 触发告警: 为了减少误告和防止告警轰炸，我们设定了触发告警的若干条件，比如次数、频率限制。</p>
+
+<h3>常规监控</h3>
+
+<p>对于广告收入指标或者T+1时间序列的监控(这类指标数据一般 波动较小 ，而且表现出 强业务特性 )，我们多采用比较常规的监控策略。</p>
+
+<ul>
+<li><p>同环比</p>
+
+<p>  环比 : f(t)/f(t-1)<br>
+  同比 : f(t)/f(t-c)。c为周期，一般为三分钟、7天、30天等。</p></li>
+<li><p>动态阈值</p>
+
+<p>  历史极值 ：取历史指定若干周期的数据的极值，差值超过 三倍方差 则判定异常。<br>
+  移动平均 ：取历史指定若干周期的数据，去除极大、小值(消除历史异常点的影响)取平均。差值超过 三倍方差 则判定异常。</p></li>
+<li><p>EWMA
+  指数加权移动平均 ：取历史指定若干周期的数据，去除极大、小值(消除历史异常点的影响)：<br>f(t)=αf(t−1)+(1−α)θt</p></li>
+</ul>
+
+
+<h3>时间序列基线</h3>
+
+<pre><code>时间序列监控主要面向的业务场景是 分钟级 的流量监控（ 波动大，而且可能极不规律 ）。基于时间序列预测的基本想法是：我们用监控维度的过去 若干个周期 的时间序列去预测下一个周期，用 预测 出来的时间序列作为基线，然后拿当天的时间序列和基线进行 比较 ，超过一定范围则触发告警。解释下：
+</code></pre>
+
+<ul>
+<li>分钟级: 我们对流量数据按分钟切片，如果有业务波动可以在分钟内发现。</li>
+<li>若干个周期: 我们忽略了季节性等因素，只考虑了一周之内的波动。所以选取了7|14天为历史周期。</li>
+<li>预测: 预测方法用的是EWMA和Holt winters。</li>
+</ul>
+
+
+<h4>时间序列的自相似性</h4>
+
+<p>用时间序列预估的方法来做分钟级的曲线预估，需要曲线满足一定的自相似性。当然幸好我们的业务在很多维度上都表现出了明显的周期性、稳定性。如果和股市一样飘忽不定的话，那预估就是扯淡了。先声明下这里说的相似性和时间序列的平稳性不是一个概念。计算时间序列的<a href="https://zhuanlan.zhihu.com/p/38130622">距离</a>有很多方法。这里我们采用欧式空间的距离：
+    对于时间序列x={x1,x2…}, y={y1,y2…}， d(x, y) = Σ(abs(xi - yi)/avg(x))
+以新闻广告的位置类型为例，不同位置在相邻周期的距离差别很大：<br>
+<img src="/images/ops/dis.PNG" alt="note" /><br>
+    我们采用若干周期内 距离的标准差 来度量两个时间序列的 自相似性: <strong>self_sim = sqrt((xi - mean(ti)<sup>2</sup>)/freq)</strong></p>
+
+<h4>自相似时间序列监控</h4>
+
+<pre><code>对于相邻周期内相似的时间序列(周期内的波动比较稳定)，通过一般的时间预测方法都能预测出比较好的时间基线。以新闻广告的列表信息流为例，基线和实际序列的差值可以稳定在一定的范围内：
+</code></pre>
+
+<p><img src="/images/ops/ts_1.png" alt="note" /></p>
+
+<h4>非自相似时间序列监控</h4>
+
+<pre><code>对于相邻周期内不相似的时间序列，比较直接的想法是 转换成自相似时间序列 。
+</code></pre>
+
+<ul>
+<li>拉宽时间窗口
+以新闻插件广告位为例，由于新闻push会带来流量的飙升，而每天push的时间点又不一样，所以流量的峰值在每天都不太相同。所以分钟级的基线预测不太理想： <img src="/images/ops/ts_2.png" alt="note" />
+如果将时间窗口拉大，比如以两个小时为例，则可以减小预测误差：
+<img src="/images/ops/ts_3.png" alt="note" />
+拉宽时间窗口其实是 牺牲了时效性来平滑时间序列 ，所以通常不太推荐这个方法。</li>
+<li>差分时间序列
+这里说的差分包括并不限于对时间序列作n阶差分、转换为增长率(同比或者环比)序列。
+以新闻banner广告为例，由于每天的客户数波动较大，所以广告曲线的振幅也不一样。
+<img src="/images/ops/ts_4.png" alt="note" />
+但是每天曲线的升降趋势却相似，所以转换成变化速度曲线：f`(t) =( f(t)- f(t-n) )/ f(t-n), n为时间跨度。
+<img src="/images/ops/ts_5.png" alt="note" /></li>
+</ul>
+
+
+<h3>相似波</h3>
+
+<p>由于广告业务的多样性和媒体的推送操作的不确定性(新闻每天不定时的push)，会导致很多维度的广告PV曲线并没有自相似性甚至毫无规律。
+ <img src="/images/ops/ts_6.png" alt="note" />
+对于这类曲线，我们监控的主要目标是 波动特性是否在合理的范围 内。所以我们抽取出曲线的波，通过和历史的正常波形进行比较来判断是否异常。</p>
+
+<h4>波的度量</h4>
+
+<p> 我们认为一个波的生命周期从上升率大于某个特定值为波的 上升期 ，到达 波峰 后变化率变为负进入 下降期 ，当下降率恢复到某个特定值则为到达 波谷 。在一个波的完整生命周期内我们会抽取出这个波的一些度量：<br />
+* 上升率 ： 波在上升期的增长率<br />
+* 波峰 ： 波的最高值<br />
+* 上半生波长 ：上升期的波长<br />
+* 下半生波长 ：下降期的波长<br />
+* 下降率 ：波在下降期的下降率<br />
+* 波谷 ：波的最低值<br />
+ 为了平滑小区间内的波动，我们滑动一个固定宽度的时间窗口。把一个窗口内的点 拟合成一条直线 。</p>
+
+<h4>波的监控</h4>
+
+<p> 在波不同的生命周期内我们会触发不同的监控策略，最后组合多个策略判断波动是否异常：<br />
+* 上升率 ：上升期内上升率如果超过历史正常上升率的极大极小值，则标记异常。<br />
+* 波峰 ： 波峰和历史均值的差值超过3个标准差，则标记异常。<br />
+* 上半生波长 ：上半生波长和历史均值的差值超过3个标准差，则标记异常。<br />
+* 下半生波长 ：下半生波长和历史均值的差值超过3个标准差，则标记异常。<br />
+* 下降率 ：下降期内下降率如果超过历史正常下降率的极大极小值，则标记异常。<br />
+* 波谷 ：波谷和历史均值的差值超过3个标准差，则标记异常。<br /></p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2018/11/20/shark-monitor/" data-title="运营-监控方法笔记" data-url="http://dannyhnu.github.io/2018/11/20/shark-monitor/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>

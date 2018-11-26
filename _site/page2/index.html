@@ -89,10 +89,6 @@
                 
                     
                 
-                    
-                
-                    
-                
             </ul>
         </nav>
     </div>
@@ -105,11 +101,11 @@
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2014/05/06/spark-ml-classfication/">spark ML源码 - CLASSIFICATION</a>
+                  <a class="post-link" href="/2013/07/14/hadoop-sort/">hadoop sort问题</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2014-05-06
+                        <i class="fa fa-calendar"></i>2013-07-14
                     </div>
                     <div class="label-card">
                         
@@ -127,7 +123,7 @@
   <i class="fa fa-th-list"></i>
   
     
-        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
+        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
     
   
 
@@ -151,85 +147,22 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <h3>SUMMARY</h3>
-
-<p>Spark classification在当前的release版本(0.9)上只实现了Naive Bayes、LogisticRegression、SVM。而在<a href="https://github.com/apache/spark/tree/master/mllib/src/main/scala/org/apache/spark/mllib/classification">开发分支</a>上也没有看到有其他算法的计划。这篇文章的代码都是截取自最新的开发分支(branch 1.0)。</p>
+                    <p>项目组最近遇到一个hadoop(1.2)问题,因为map中产生的key太多,导致job花费了大量时间在map的shuffle上。准确来说时间应该都花在了IO上面，map产生的数据过多，使得shuffle阶段IO操作过多。 当然因为db设计的原因，map数据过大也是必然的事。  纵观Mapreduce的shuffle过程： sort、 IO 、merge， 似乎也只有sort还有优化的可能。</p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2014/05/06/spark-ml-classfication/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2013/07/14/hadoop-sort/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2014/04/22/spark-intro/">spark introduction</a>
+                  <a class="post-link" href="/2013/07/10/note-ml/">machine learning 笔记</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2014-04-22
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-
-                    <div class="label-card">
-                    
-
-
-<!-- <span class="point">•</span> -->
-<span class="categories">
-  <i class="fa fa-th-list"></i>
-  
-    
-        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
-    
-  
-
-  <!-- <span class="point">•</span> -->
-</span>
-
-
-                    </div>
-
-                    <div class="label-card">
-                    
-<!-- <span class="point">•</span> -->
-<span class="pageTag">
-  <i class="fa fa-tags"></i>
-  
-    
-  
-
-</span>
-
-                    </div>
-                </div>
-                <div class="excerpt">
-                    <h3>WHY SPARK</h3>
-
-<h4>spark vs hadoop MR</h4>
-
-<p>记得之前有被问到：Map Reduce为什么这么慢？之前的理解是shuffle阶段的IO和MR的执行过程所致。最近看到一篇文章(<a href="http://jerryshao.me/architecture/2013/04/15/%E4%BC%A0%E7%BB%9F%E7%9A%84MapReduce%E6%A1%86%E6%9E%B6%E6%85%A2%E5%9C%A8%E5%93%AA%E9%87%8C/">为什么之前的MapReduce系统比较慢</a>)。</p>
-
-                </div>
-                <div class="read-all">
-                    <a  href="/2014/04/22/spark-intro/"><i class="fa fa-newspaper-o"></i>Read All</a>
-                </div>
-                <hr>
-              </li>
-            
-              <li>
-                <h2>
-                  <a class="post-link" href="/2014/04/14/r-lm/">Prediction with lm in R</a>
-                </h2>
-                <div class="label">
-                    <div class="label-card">
-                        <i class="fa fa-calendar"></i>2014-04-14
+                        <i class="fa fa-calendar"></i>2013-07-10
                     </div>
                     <div class="label-card">
                         
@@ -271,83 +204,22 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>最近工作中需要用R的lm模型做一个预测的任务。</p>
-
-<p>其实写完第一句话，我就意识到问题出在哪了。我其实还没完全弄明白在这个task的goal，甚至连数据为什么会这样都不知道，可是却按着ppt从准备数据到建模，一气呵成。等到把参数发出去，结果可想而知。</p>
+                    <p>接触<strong>machine learning</strong>一年多了 也攒了不少笔记 话说期间各种算法都有接触过 分类 聚类  推荐 降维...  或许是research的不够深入的原因吧  我发现其实大多数算法都可以用一句话概况</p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2014/04/14/r-lm/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2013/07/10/note-ml/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2014/04/12/note-hive/">hive session</a>
+                  <a class="post-link" href="/2013/07/03/note-sort/">排序算法笔记</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2014-04-12
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-
-                    <div class="label-card">
-                    
-
-
-<!-- <span class="point">•</span> -->
-<span class="categories">
-  <i class="fa fa-th-list"></i>
-  
-    
-        <a href="/category/#hadoop" title="Category: hadoop" rel="category">hadoop</a>
-    
-  
-
-  <!-- <span class="point">•</span> -->
-</span>
-
-
-                    </div>
-
-                    <div class="label-card">
-                    
-<!-- <span class="point">•</span> -->
-<span class="pageTag">
-  <i class="fa fa-tags"></i>
-  
-    
-  
-
-</span>
-
-                    </div>
-                </div>
-                <div class="excerpt">
-                    <h3>概述</h3>
-
-<p>简而言之， hive就是封装了一套map reduce程序的tool， 它将类sql解释成 mr job流去完成既定的etl工作。 所以hive的优势有两个</p>
-
-                </div>
-                <div class="read-all">
-                    <a  href="/2014/04/12/note-hive/"><i class="fa fa-newspaper-o"></i>Read All</a>
-                </div>
-                <hr>
-              </li>
-            
-              <li>
-                <h2>
-                  <a class="post-link" href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a>
-                </h2>
-                <div class="label">
-                    <div class="label-card">
-                        <i class="fa fa-calendar"></i>2013-08-16
+                        <i class="fa fa-calendar"></i>2013-07-03
                     </div>
                     <div class="label-card">
                         
@@ -389,11 +261,127 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。</p>
+                    <h4>文章排名</h4>
+
+<p>最近工作中需要对一个CMS中的post排序进行优化, 所以临时学习了下各种文章排名算法。 而影响排序的因素无非是时间、总评数、好评、差评    ，怎么倾向则根据具体business来定。 比如电商可能会选择忽略时间效应的wilson score， 而像Hacker News就更可能会把时间考虑的比较重要。</p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2013/08/16/recommendation-douban/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2013/07/03/note-sort/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2013/03/09/zoo/">上海野生动物园</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2013-03-09
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#travel" title="Category: travel" rel="category">travel</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>上海野生动物园, 强烈推荐啊！</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2013/03/09/zoo/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2012/10/01/yellow_mountain/">十一黄山看人记</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2012-10-01
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#travel" title="Category: travel" rel="category">travel</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>黄山是所有爬过的山中最漂亮的！</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2012/10/01/yellow_mountain/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
@@ -408,10 +396,10 @@
             <a href="/index.html" class="previous"><i class="fa fa-angle-double-left"></i></a>
             <a href="/" class="previous"><i class="fa fa-angle-left"></i></a>
           
-          <span class="page_number ">2/4</span>
+          <span class="page_number ">2/2</span>
           
-            <a href="/page3" class="next"><i class="fa fa-angle-right"></i></a>
-            <a href="/page4" class="next"><i class="fa fa-angle-double-right"></i></a>
+            <span class="next disable"><i class="fa fa-angle-right"></i></span>
+            <span class="next disable"><i class="fa fa-angle-double-right"></i></span>
           
         </div>
     </div>
@@ -425,25 +413,25 @@
                 </div>
                 <ul class="content-ul" recent>
                     
+                        <li><a href="/2018/11/20/shark-monitor/">运营-监控方法笔记</a></li>
+                    
+                        <li><a href="/2018/06/20/shark/">关于大数据查询系统的一些思考</a></li>
+                    
                         <li><a href="/2016/05/17/spark-watchouts/">spark  - 那些坑</a></li>
                     
                         <li><a href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a></li>
                     
-                        <li><a href="/2014/07/06/KAFKA-intro/">kafka</a></li>
-                    
-                        <li><a href="/2014/05/13/spark-ml-clustering/">spark ML - CLSUTERING </a></li>
-                    
-                        <li><a href="/2014/05/11/mysql-lfx-share/">mysql session</a></li>
-                    
-                        <li><a href="/2014/05/06/spark-ml-classfication/">spark ML源码 - CLASSIFICATION</a></li>
-                    
-                        <li><a href="/2014/04/22/spark-intro/">spark introduction</a></li>
-                    
-                        <li><a href="/2014/04/14/r-lm/">Prediction with lm in R</a></li>
-                    
-                        <li><a href="/2014/04/12/note-hive/">hive session</a></li>
-                    
                         <li><a href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a></li>
+                    
+                        <li><a href="/2013/07/14/hadoop-sort/">hadoop sort问题</a></li>
+                    
+                        <li><a href="/2013/07/10/note-ml/">machine learning 笔记</a></li>
+                    
+                        <li><a href="/2013/07/03/note-sort/">排序算法笔记</a></li>
+                    
+                        <li><a href="/2013/03/09/zoo/">上海野生动物园</a></li>
+                    
+                        <li><a href="/2012/10/01/yellow_mountain/">十一黄山看人记</a></li>
                     
                 </ul>
             </div>
@@ -457,24 +445,6 @@
                 <ul class="content-ul" cate>
                     
                     <li>
-                        <a href="/category/#language" class="categories-list-item" cate="language">
-                            <span class="name">
-                                language
-                            </span>
-                            <span class="badge">1</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="/category/#algorithm" class="categories-list-item" cate="algorithm">
-                            <span class="name">
-                                algorithm
-                            </span>
-                            <span class="badge">5</span>
-                        </a>
-                    </li>
-                    
-                    <li>
                         <a href="/category/#travel" class="categories-list-item" cate="travel">
                             <span class="name">
                                 travel
@@ -484,9 +454,18 @@
                     </li>
                     
                     <li>
-                        <a href="/category/#hadoop" class="categories-list-item" cate="hadoop">
+                        <a href="/category/#algorithm" class="categories-list-item" cate="algorithm">
                             <span class="name">
-                                hadoop
+                                algorithm
+                            </span>
+                            <span class="badge">3</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#大数据" class="categories-list-item" cate="大数据">
+                            <span class="name">
+                                大数据
                             </span>
                             <span class="badge">2</span>
                         </a>
@@ -497,23 +476,14 @@
                             <span class="name">
                                 spark
                             </span>
-                            <span class="badge">5</span>
+                            <span class="badge">2</span>
                         </a>
                     </li>
                     
                     <li>
-                        <a href="/category/#db" class="categories-list-item" cate="db">
+                        <a href="/category/#ops" class="categories-list-item" cate="ops">
                             <span class="name">
-                                db
-                            </span>
-                            <span class="badge">1</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="/category/#queue" class="categories-list-item" cate="queue">
-                            <span class="name">
-                                queue
+                                ops
                             </span>
                             <span class="badge">1</span>
                         </a>

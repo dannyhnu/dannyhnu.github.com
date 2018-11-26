@@ -89,10 +89,6 @@
                 
                     
                 
-                    
-                
-                    
-                
             </ul>
         </nav>
     </div>
@@ -222,12 +218,19 @@ spark.ui.retainedStages</code></pre>
 
 <p>目前的spark 1.6 还是存在这个问题，所以只好做和谐处理。当查询中<strong>SUM</strong>超过24个，将sql拆成多条sql处理。</p>
 
+<h3>spark sql数据类型问题</h3>
+
+<h5>问题</h5>
+
+<p>数据中有个<em>曝光</em>字段，生成模型的时候定义成了<em>int</em>类型。sql的聚合函数<em>SUM</em>会把结果转成<em>long</em>类型。但是在测试的时候发现结果会变小。这个坑比较隐蔽，貌似只有当在单个task内的聚合值超过21亿的时候才会影响最终结果。</p>
+
+<h5>解决办法</h5>
+
+<p>数据源把<em>int</em>改成<em>long</em>类型就OK了</p>
+
         </article>
         <hr>
         
-        
-            
-            
         
             
             
