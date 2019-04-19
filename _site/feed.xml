@@ -5,8 +5,8 @@
     <description></description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 19 Apr 2019 15:01:07 +0800</pubDate>
-    <lastBuildDate>Fri, 19 Apr 2019 15:01:07 +0800</lastBuildDate>
+    <pubDate>Fri, 19 Apr 2019 15:08:13 +0800</pubDate>
+    <lastBuildDate>Fri, 19 Apr 2019 15:08:13 +0800</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
       <item>
@@ -365,7 +365,7 @@
 &lt;/ol&gt;
 
 
-&lt;h4&gt;基本假设&lt;/h4&gt;
+&lt;h3&gt;基本假设&lt;/h3&gt;
 
 &lt;p&gt;线性回归假设数据服从高斯分布，所以用一个平面(线性决策边界)可以把数据分开。但现实中数据并不都是完美的高斯分布，所以逻辑回归假设数据服从伯努利分布，通过逻辑函数(Sigmoid)作一层隐射，用一个曲面(非线性决策边界)去分开数据。逻辑回归的假设函数形式如下：&lt;br&gt;
 &lt;img src=&quot;/images/lr/lr.png&quot; alt=&quot;note&quot; /&gt;
@@ -373,7 +373,7 @@
 其实这就是个sigmoid函数，见下图：
 &lt;img src=&quot;/images/lr/sigmoid.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
 
-&lt;h4&gt;特征工程&lt;/h4&gt;
+&lt;h3&gt;特征工程&lt;/h3&gt;
 
 &lt;p&gt;因为LR比较朴实，表达能力较弱，所以做LR百分之80的工作其实是在做特征工程。毕竟只有找对了&lt;em&gt;因&lt;/em&gt;，才能到达正确的&lt;em&gt;果&lt;/em&gt;。&lt;/p&gt;
 
@@ -395,9 +395,9 @@
 &lt;/ul&gt;
 
 
-&lt;h4&gt;损失函数&lt;/h4&gt;
+&lt;h3&gt;损失函数&lt;/h3&gt;
 
-&lt;h4&gt;模型训练&lt;/h4&gt;
+&lt;h3&gt;模型训练&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;样本选择&lt;/p&gt;&lt;/li&gt;
@@ -406,7 +406,7 @@
 &lt;/ul&gt;
 
 
-&lt;h4&gt;模型评估&lt;/h4&gt;
+&lt;h3&gt;模型评估&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;精准度&lt;/p&gt;&lt;/li&gt;
@@ -416,7 +416,7 @@
 &lt;/ul&gt;
 
 
-&lt;h4&gt;实现框架&lt;/h4&gt;
+&lt;h3&gt;实现框架&lt;/h3&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;SPARK ML&lt;/p&gt;&lt;/li&gt;
