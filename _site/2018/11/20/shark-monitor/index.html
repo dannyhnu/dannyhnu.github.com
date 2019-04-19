@@ -6,15 +6,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>运营-监控方法笔记</title>
-    <meta name="description" content="我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。">
+    <title>大数据笔记 - 监控系统</title>
+    <meta name="description" content="在实际工作中经常碰到这样的监控需求，重点城市的访问流量是否有大的波动、一个广告位的ecpm是否在合理的范围内、机器的CPU利用率是否正常...经过一段时间case by case的支持，我们想到或许有通用的办法去解决这类问题。">
 
     <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
     <link rel="stylesheet" href=" /css/main.css ">
-    <link rel="canonical" href="http://dannyhnu.github.io/2018/11/20/shark-monitor/">
-    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+    <link rel="canonical" href="http://localhost:4000/2018/11/20/shark-monitor/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
 
 
 
@@ -89,6 +89,8 @@
                 
                     
                 
+                    
+                
             </ul>
         </nav>
     </div>
@@ -97,7 +99,7 @@
 
         <div class="page clearfix" post>
     <div class="left">
-        <h1>运营-监控方法笔记</h1>
+        <h1>大数据笔记 - 监控系统</h1>
         <div class="label">
 
             <div class="label-card">
@@ -147,32 +149,64 @@
         </div>
         <hr>
         <article itemscope itemtype="http://schema.org/BlogPosting">
-        <p>我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。</p>
+        <p>在实际工作中经常碰到这样的监控需求，重点城市的访问流量是否有大的波动、一个广告位的ecpm是否在合理的范围内、机器的CPU利用率是否正常...
+经过一段时间case by case的支持，我们想到或许有通用的办法去解决这类问题。</p>
 
 <!-- more -->
 
 
-<p><br /></p>
+<h3>overview</h3>
 
-<h2>监控需求</h2>
+<p>简单来说，各类监控需求都可以总结为判断一条曲线是否正常，横轴是时间，纵轴是PV、单价、CPU利用率等等的曲线。所以我们对监控流程做了这样的改进：</p>
 
-<h3>实时性</h3>
+<ul>
+<li><p>老流程：产品、运营、开发手工指定监控维度，并根据经验拍板监控规则。这样带来的问题就是监控维度覆盖面比较低、监控规则指定随意、滞后、维护成本高。
+<img src="/images/ops/process_old.PNG" alt="note" /><br></p></li>
+<li><p>新流程：自动扫描监控维度，自动学习监控规则。
+<img src="/images/ops/process_new.PNG" alt="note" /><br></p></li>
+</ul>
 
-<p>从实时性上来区分，我们的监控场景主要可以分为天级（T+1）、小时级（H+1）、分钟级(M+1)。其中天级监控的场景主要是收入相关指标，比如ecpm、cpc等。这类曲线一般波动较小，且业务特性比较强。 而小时、分钟级监控的场景为广告实时流量，这类曲线波动大且不规律。</p>
 
-<h3>粒度</h3>
+<h3>自动化监控</h3>
 
-<p>因为广告业务配置多而繁杂，单个维度的变化都能引起广告收入的波动。所以我们对实时流量做了全维度监控。</p>
+<p>监控流程如下：</p>
 
-<h2>监控策略</h2>
+<ul>
+<li>1 自动扫描监控维度(单维或交叉维度)</li>
+<li>2 对监控时间序列曲线进行分类(平稳、自相似、非平稳)</li>
+<li>3 对不同类别曲线采用不同监控规则(组合策略)</li>
+</ul>
 
-<p>Shark采用的监控策略可以分为常规方法、时间序列基线、相似波几种。
-* 组合策略: 一般对于波动比较大的监控场景，我们会采用几个策略的组合来判定是否异常。比如五个策略有三个判定异常则认定异常。<br>
-* 触发告警: 为了减少误告和防止告警轰炸，我们设定了触发告警的若干条件，比如次数、频率限制。</p>
 
-<h3>常规监控</h3>
+<h4>时间序列的自相似性</h4>
 
-<p>对于广告收入指标或者T+1时间序列的监控(这类指标数据一般 波动较小 ，而且表现出 强业务特性 )，我们多采用比较常规的监控策略。</p>
+<p>在对曲线分类之前，先介绍下我们对时间序列自相似的定义：</p>
+
+<ul>
+<li>计算公式：对于时间序列t我们按周期长度n划分序列t={t1,t2…tm}, 其中m是周期数。我们采用欧式距离标准差来度量周期间的距离，用若干周期内距离平均值来度量自相似性：
+  d(ti) = stdev(linearScale(ti))， 0 &lt; i &lt; n
+  sim(t) = mean(d(t1),d(t2)..d(tn))</li>
+</ul>
+
+
+<p><img src="/images/ops/sim.PNG" alt="note" /><br>
+当一条曲线在不同周期内的距离越小，我们认为这条曲线自相似性越高。<br>
+<img src="/images/ops/dis.PNG" alt="note" /></p>
+
+<h4>序列分类</h4>
+
+<p>我们采用以下几个步骤对曲线分类为平稳、自相似、非平稳时间序列：</p>
+
+<ul>
+<li><p>平稳曲线： 计算曲线标准差，当波动小于某个阈值，我们认为这条曲线为平稳时间序列。</p></li>
+<li><p>自相似曲线: 根据监控时效性对曲线划分周期，计算曲线自相似距离，当自相似距离小于某个阈值为自相似曲线。</p></li>
+<li><p>非平稳曲线: 不满足以上两个条件。</p></li>
+</ul>
+
+
+<h4>监控策略 · 常规监控</h4>
+
+<p>对于平稳时间序列的监控(这类指标数据一般波动较小 ，而且表现出<em>强业务特性</em>)，我们多采用比较常规的监控策略。</p>
 
 <ul>
 <li><p>同环比</p>
@@ -188,10 +222,9 @@
 </ul>
 
 
-<h3>时间序列基线</h3>
+<h3>监控策略 · 时间序列基线</h3>
 
-<pre><code>时间序列监控主要面向的业务场景是 分钟级 的流量监控（ 波动大，而且可能极不规律 ）。基于时间序列预测的基本想法是：我们用监控维度的过去 若干个周期 的时间序列去预测下一个周期，用 预测 出来的时间序列作为基线，然后拿当天的时间序列和基线进行 比较 ，超过一定范围则触发告警。解释下：
-</code></pre>
+<p>自相似时间序列监控主要面向的业务场景是 分钟级 的流量监控（ 波动大，而且可能极不规律 ）。基于时间序列预测的基本想法是：我们用监控维度的过去 若干个周期 的时间序列去预测下一个周期，用 预测 出来的时间序列作为基线，然后拿当天的时间序列和基线进行 比较 ，超过一定范围则触发告警。解释下：</p>
 
 <ul>
 <li>分钟级: 我们对流量数据按分钟切片，如果有业务波动可以在分钟内发现。</li>
@@ -200,46 +233,31 @@
 </ul>
 
 
-<h4>时间序列的自相似性</h4>
+<p>对于相邻周期内相似的时间序列(周期内的波动比较稳定)，通过一般的时间预测方法都能预测出比较好的时间基线。以新闻广告的列表信息流为例，基线和实际序列的差值可以稳定在一定的范围内：
+<img src="/images/ops/ts_1.png" alt="note" />
+    对于基线和实际序列的偏差阈值的选择有两个办法：3sigma和局部密度估计(Local Outlier Factor)。</p>
 
-<p>用时间序列预估的方法来做分钟级的曲线预估，需要曲线满足一定的自相似性。当然幸好我们的业务在很多维度上都表现出了明显的周期性、稳定性。如果和股市一样飘忽不定的话，那预估就是扯淡了。先声明下这里说的相似性和时间序列的平稳性不是一个概念。计算时间序列的<a href="https://zhuanlan.zhihu.com/p/38130622">距离</a>有很多方法。这里我们采用欧式空间的距离：
-    对于时间序列x={x1,x2…}, y={y1,y2…}， d(x, y) = Σ(abs(xi - yi)/avg(x))
-以新闻广告的位置类型为例，不同位置在相邻周期的距离差别很大：<br>
-<img src="/images/ops/dis.PNG" alt="note" /><br>
-    我们采用若干周期内 距离的标准差 来度量两个时间序列的 自相似性: <strong>self_sim = sqrt((xi - mean(ti)<sup>2</sup>)/freq)</strong></p>
-
-<h4>自相似时间序列监控</h4>
-
-<pre><code>对于相邻周期内相似的时间序列(周期内的波动比较稳定)，通过一般的时间预测方法都能预测出比较好的时间基线。以新闻广告的列表信息流为例，基线和实际序列的差值可以稳定在一定的范围内：
-</code></pre>
-
-<p><img src="/images/ops/ts_1.png" alt="note" /></p>
-
-<h4>非自相似时间序列监控</h4>
-
-<pre><code>对于相邻周期内不相似的时间序列，比较直接的想法是 转换成自相似时间序列 。
-</code></pre>
+<p>对于相邻周期内不相似的时间序列，比较直接的想法是 转换成自相似时间序列 。</p>
 
 <ul>
-<li>拉宽时间窗口
+<li><p>拉宽时间窗口
 以新闻插件广告位为例，由于新闻push会带来流量的飙升，而每天push的时间点又不一样，所以流量的峰值在每天都不太相同。所以分钟级的基线预测不太理想： <img src="/images/ops/ts_2.png" alt="note" />
 如果将时间窗口拉大，比如以两个小时为例，则可以减小预测误差：
 <img src="/images/ops/ts_3.png" alt="note" />
-拉宽时间窗口其实是 牺牲了时效性来平滑时间序列 ，所以通常不太推荐这个方法。</li>
-<li>差分时间序列
-这里说的差分包括并不限于对时间序列作n阶差分、转换为增长率(同比或者环比)序列。
+拉宽时间窗口其实是 牺牲了时效性来平滑时间序列 ，所以通常不太推荐这个方法。</p></li>
+<li><p>差分时间序列：这里说的差分包括并不限于对时间序列作n阶差分、转换为增长率(同比或者环比)序列。
 以新闻banner广告为例，由于每天的客户数波动较大，所以广告曲线的振幅也不一样。
 <img src="/images/ops/ts_4.png" alt="note" />
 但是每天曲线的升降趋势却相似，所以转换成变化速度曲线：f`(t) =( f(t)- f(t-n) )/ f(t-n), n为时间跨度。
-<img src="/images/ops/ts_5.png" alt="note" /></li>
+<img src="/images/ops/ts_5.png" alt="note" /></p></li>
 </ul>
 
 
-<h3>相似波</h3>
+<h4>监控策略 · 相似波</h4>
 
 <p>由于广告业务的多样性和媒体的推送操作的不确定性(新闻每天不定时的push)，会导致很多维度的广告PV曲线并没有自相似性甚至毫无规律。
  <img src="/images/ops/ts_6.png" alt="note" />
-对于这类曲线，我们监控的主要目标是 波动特性是否在合理的范围 内。所以我们抽取出曲线的波，通过和历史的正常波形进行比较来判断是否异常。</p>
+对于这类非平稳曲线，我们监控的主要目标是 波动特性是否在合理的范围 内。所以我们抽取出曲线的波，通过和历史的正常波形进行比较来判断是否异常。</p>
 
 <h4>波的度量</h4>
 
@@ -293,13 +311,16 @@
             
             
         
+            
+            
+        
         
 
 
         <h2 id="comments">Comments</h2>
         
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2018/11/20/shark-monitor/" data-title="运营-监控方法笔记" data-url="http://dannyhnu.github.io/2018/11/20/shark-monitor/"></div>
+<div class="ds-thread" data-thread-key="http://localhost:4000/2018/11/20/shark-monitor/" data-title="大数据笔记 - 监控系统" data-url="http://localhost:4000/2018/11/20/shark-monitor/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">

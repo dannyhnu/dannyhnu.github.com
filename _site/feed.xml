@@ -3,40 +3,138 @@
   <channel>
     <title>Dan</title>
     <description></description>
-    <link>http://dannyhnu.github.io/</link>
-    <atom:link href="http://dannyhnu.github.io/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 26 Nov 2018 16:02:37 +0800</pubDate>
-    <lastBuildDate>Mon, 26 Nov 2018 16:02:37 +0800</lastBuildDate>
-    <generator>Jekyll v3.1.3</generator>
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Fri, 19 Apr 2019 15:01:07 +0800</pubDate>
+    <lastBuildDate>Fri, 19 Apr 2019 15:01:07 +0800</lastBuildDate>
+    <generator>Jekyll v3.8.5</generator>
     
       <item>
-        <title>运营-监控方法笔记</title>
-        <description>&lt;p&gt;我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。&lt;/p&gt;
+        <title>spark vs. flink</title>
+        <description>&lt;p&gt;先说观点，spark和flink都是目前能够一站式解决lambda架构的计算框架。因为spark出来的早，现在在活跃度、成熟度方面比flink强。flink发展相对较晚，相比spark各个细节做了很多优化。个人觉得二者是同一个世代计算框架的不同实现，细节方面会相互学习、增强。但要说谁能干掉谁，恐怕都没有这能力。&lt;/p&gt;
 
 &lt;!-- more --&gt;
 
 
-&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p&gt;这里从几个方面比较下二者的区别。&lt;/p&gt;
 
-&lt;h2&gt;监控需求&lt;/h2&gt;
+&lt;h3&gt;内存管理&lt;/h3&gt;
 
-&lt;h3&gt;实时性&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;SPARK. executor内存管理算是spark的一个软肋。spark并不会直接操操控jvm上堆内内存，只是进行逻辑上的&quot;规划式&quot;的管理。
+当jvm起来的时候，executor会维护Storage、Execution的堆内堆外四个内存&lt;em&gt;map&lt;/em&gt;, 分别记录各个块在堆内堆外的内存状态。虽然会有一些防止oom的buffer机制，但这种内存记录器不可能完全准确(比如被spark标记释放的对象可能没有被JVM回收)，所以spark不能完全避免OOM。
+&lt;img src=&quot;/images/hadoop/spark_mem_1.png&quot; alt=&quot;note&quot; /&gt;
+&lt;img src=&quot;/images/hadoop/spark_mem_2.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;FLINK. 相比spark，flink在内存管理更用心。&lt;br&gt;
+① 采用积极的内存管理策略：用专门的内存池负责每个数据片的分配和管理。&lt;br&gt;
+② 定制化的数据片操作：高效的二进制操作、量身定制的序列化框架。&lt;br&gt;
+&lt;img src=&quot;/images/hadoop/flink_mem_1.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;从实时性上来区分，我们的监控场景主要可以分为天级（T+1）、小时级（H+1）、分钟级(M+1)。其中天级监控的场景主要是收入相关指标，比如ecpm、cpc等。这类曲线一般波动较小，且业务特性比较强。 而小时、分钟级监控的场景为广告实时流量，这类曲线波动大且不规律。&lt;/p&gt;
 
-&lt;h3&gt;粒度&lt;/h3&gt;
+&lt;h3&gt;抽象&lt;/h3&gt;
 
-&lt;p&gt;因为广告业务配置多而繁杂，单个维度的变化都能引起广告收入的波动。所以我们对实时流量做了全维度监控。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;数据模型. 对于底层数据抽象，rdd(Resilient Distributed Datasets)是spark的灵魂。rdd其实是一种分布式的内存抽象，负责处理内存、磁盘数据的分布式存储、和HA(checkpoints)等。spark在rdd上封装出dataset，不管是batch还是streaming都直接通过dataset操控数据。而flink的底层数据抽象成一种有状态流(stateful stream), 然后分别封装成DataStream和Dataset供streaming和batch任务操作数据。在业界普遍无缝结合batch、streaming任务的趋势下，spark的做法显然更合理点。但是flink考虑到了实时计算的上下文状态的重要性，这点更胜一筹。
+&lt;img src=&quot;/images/hadoop/flink_data.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;编程模型. 对于数据处理流，spark和flink本质上是一样的。虽然叫法不一样(spark叫job、stage，flink叫transformation、operator)，但其实都是map-&gt;shuffle-&gt;reduce的dag(有向无环图)。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h2&gt;监控策略&lt;/h2&gt;
 
-&lt;p&gt;Shark采用的监控策略可以分为常规方法、时间序列基线、相似波几种。
-* 组合策略: 一般对于波动比较大的监控场景，我们会采用几个策略的组合来判定是否异常。比如五个策略有三个判定异常则认定异常。&lt;br&gt;
-* 触发告警: 为了减少误告和防止告警轰炸，我们设定了触发告警的若干条件，比如次数、频率限制。&lt;/p&gt;
+&lt;h3&gt;实时计算&lt;/h3&gt;
 
-&lt;h3&gt;常规监控&lt;/h3&gt;
+&lt;p&gt;在实时计算(streaming)的支持上，flink做的更出色一点。&lt;/p&gt;
 
-&lt;p&gt;对于广告收入指标或者T+1时间序列的监控(这类指标数据一般 波动较小 ，而且表现出 强业务特性 )，我们多采用比较常规的监控策略。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;窗口. spark对窗口的支持比较弱，只能根据time interval起batch任务。flink对窗口的支持很强大，既能按时间驱动(比如：每30秒)，也能按数据驱动(比如：每100个元素)。而且窗口的类型包括滚动窗口（没有重叠）， 滑动窗口（有重叠），以及会话窗口 （由不活动的间隙所打断）。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;状态. spark streaming不记录数据状态，所以对于一些上下文相关的计算，spark需要借助外部的存储来保存上下文状态。而flink提供了State Backends对历史数据进行保存，比如存在内存(MemoryStateBackend)、文件（FsStateBackend）、外部DB(RocksDBStateBackend)，这样会使得一些上下文相关的计算逻辑更易实现。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;应用层&lt;/h3&gt;
+
+&lt;p&gt;应用层因为spark发展的时间比较久，社区也更活跃点，所以在sql、机器学习的支持都已经做的比较成熟了。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;SQL. 对flink而言，sql层统一了batch和streaming的编程模型。但是由于支持比较晚，各方面还不是很成熟。二者还有一点不同的是，spark的的底层sql解析器是Catalyst，而flink是Calcite。当然，这个差别并没有什么大的意义。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;ML：同上，相比spark，flink还有很长的路要走。但是相比spark，flink有个天生的优势。spark由于rdd的不可变性，且不支持状态存储，所以在机器学习的迭代过程中显得力不从心。而flink由于支持状态持久化，所以在算法迭代计算过程中会更方便。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;附录&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://www.ibm.com/developerworks/cn/analytics/library/ba-cn-apache-spark-memory-management/index.html&quot;&gt;Apache Spark 内存管理详解&lt;/a&gt;&lt;br&gt;
+&lt;a href=&quot;http://wuchong.me/blog/2016/04/29/flink-internals-memory-manage/&quot;&gt;Flink 原理与实现：内存管理&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sat, 12 Jan 2019 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2019/01/12/spark_vs_flink/</link>
+        <guid isPermaLink="true">http://localhost:4000/2019/01/12/spark_vs_flink/</guid>
+        
+        
+        <category>realtime</category>
+        
+      </item>
+    
+      <item>
+        <title>大数据笔记 - 监控系统</title>
+        <description>&lt;p&gt;在实际工作中经常碰到这样的监控需求，重点城市的访问流量是否有大的波动、一个广告位的ecpm是否在合理的范围内、机器的CPU利用率是否正常...
+经过一段时间case by case的支持，我们想到或许有通用的办法去解决这类问题。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;h3&gt;overview&lt;/h3&gt;
+
+&lt;p&gt;简单来说，各类监控需求都可以总结为判断一条曲线是否正常，横轴是时间，纵轴是PV、单价、CPU利用率等等的曲线。所以我们对监控流程做了这样的改进：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;老流程：产品、运营、开发手工指定监控维度，并根据经验拍板监控规则。这样带来的问题就是监控维度覆盖面比较低、监控规则指定随意、滞后、维护成本高。
+&lt;img src=&quot;/images/ops/process_old.PNG&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;新流程：自动扫描监控维度，自动学习监控规则。
+&lt;img src=&quot;/images/ops/process_new.PNG&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;自动化监控&lt;/h3&gt;
+
+&lt;p&gt;监控流程如下：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;1 自动扫描监控维度(单维或交叉维度)&lt;/li&gt;
+&lt;li&gt;2 对监控时间序列曲线进行分类(平稳、自相似、非平稳)&lt;/li&gt;
+&lt;li&gt;3 对不同类别曲线采用不同监控规则(组合策略)&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;时间序列的自相似性&lt;/h4&gt;
+
+&lt;p&gt;在对曲线分类之前，先介绍下我们对时间序列自相似的定义：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;计算公式：对于时间序列t我们按周期长度n划分序列t={t1,t2…tm}, 其中m是周期数。我们采用欧式距离标准差来度量周期间的距离，用若干周期内距离平均值来度量自相似性：
+  d(ti) = stdev(linearScale(ti))， 0 &amp;lt; i &amp;lt; n
+  sim(t) = mean(d(t1),d(t2)..d(tn))&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;&lt;img src=&quot;/images/ops/sim.PNG&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;
+当一条曲线在不同周期内的距离越小，我们认为这条曲线自相似性越高。&lt;br&gt;
+&lt;img src=&quot;/images/ops/dis.PNG&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
+
+&lt;h4&gt;序列分类&lt;/h4&gt;
+
+&lt;p&gt;我们采用以下几个步骤对曲线分类为平稳、自相似、非平稳时间序列：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;平稳曲线： 计算曲线标准差，当波动小于某个阈值，我们认为这条曲线为平稳时间序列。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;自相似曲线: 根据监控时效性对曲线划分周期，计算曲线自相似距离，当自相似距离小于某个阈值为自相似曲线。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;非平稳曲线: 不满足以上两个条件。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;监控策略 · 常规监控&lt;/h4&gt;
+
+&lt;p&gt;对于平稳时间序列的监控(这类指标数据一般波动较小 ，而且表现出&lt;em&gt;强业务特性&lt;/em&gt;)，我们多采用比较常规的监控策略。&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;同环比&lt;/p&gt;
@@ -52,10 +150,9 @@
 &lt;/ul&gt;
 
 
-&lt;h3&gt;时间序列基线&lt;/h3&gt;
+&lt;h3&gt;监控策略 · 时间序列基线&lt;/h3&gt;
 
-&lt;pre&gt;&lt;code&gt;时间序列监控主要面向的业务场景是 分钟级 的流量监控（ 波动大，而且可能极不规律 ）。基于时间序列预测的基本想法是：我们用监控维度的过去 若干个周期 的时间序列去预测下一个周期，用 预测 出来的时间序列作为基线，然后拿当天的时间序列和基线进行 比较 ，超过一定范围则触发告警。解释下：
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;自相似时间序列监控主要面向的业务场景是 分钟级 的流量监控（ 波动大，而且可能极不规律 ）。基于时间序列预测的基本想法是：我们用监控维度的过去 若干个周期 的时间序列去预测下一个周期，用 预测 出来的时间序列作为基线，然后拿当天的时间序列和基线进行 比较 ，超过一定范围则触发告警。解释下：&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;分钟级: 我们对流量数据按分钟切片，如果有业务波动可以在分钟内发现。&lt;/li&gt;
@@ -64,46 +161,31 @@
 &lt;/ul&gt;
 
 
-&lt;h4&gt;时间序列的自相似性&lt;/h4&gt;
+&lt;p&gt;对于相邻周期内相似的时间序列(周期内的波动比较稳定)，通过一般的时间预测方法都能预测出比较好的时间基线。以新闻广告的列表信息流为例，基线和实际序列的差值可以稳定在一定的范围内：
+&lt;img src=&quot;/images/ops/ts_1.png&quot; alt=&quot;note&quot; /&gt;
+    对于基线和实际序列的偏差阈值的选择有两个办法：3sigma和局部密度估计(Local Outlier Factor)。&lt;/p&gt;
 
-&lt;p&gt;用时间序列预估的方法来做分钟级的曲线预估，需要曲线满足一定的自相似性。当然幸好我们的业务在很多维度上都表现出了明显的周期性、稳定性。如果和股市一样飘忽不定的话，那预估就是扯淡了。先声明下这里说的相似性和时间序列的平稳性不是一个概念。计算时间序列的&lt;a href=&quot;https://zhuanlan.zhihu.com/p/38130622&quot;&gt;距离&lt;/a&gt;有很多方法。这里我们采用欧式空间的距离：
-    对于时间序列x={x1,x2…}, y={y1,y2…}， d(x, y) = Σ(abs(xi - yi)/avg(x))
-以新闻广告的位置类型为例，不同位置在相邻周期的距离差别很大：&lt;br&gt;
-&lt;img src=&quot;/images/ops/dis.PNG&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;
-    我们采用若干周期内 距离的标准差 来度量两个时间序列的 自相似性: &lt;strong&gt;self_sim = sqrt((xi - mean(ti)&lt;sup&gt;2&lt;/sup&gt;)/freq)&lt;/strong&gt;&lt;/p&gt;
-
-&lt;h4&gt;自相似时间序列监控&lt;/h4&gt;
-
-&lt;pre&gt;&lt;code&gt;对于相邻周期内相似的时间序列(周期内的波动比较稳定)，通过一般的时间预测方法都能预测出比较好的时间基线。以新闻广告的列表信息流为例，基线和实际序列的差值可以稳定在一定的范围内：
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;&lt;img src=&quot;/images/ops/ts_1.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;非自相似时间序列监控&lt;/h4&gt;
-
-&lt;pre&gt;&lt;code&gt;对于相邻周期内不相似的时间序列，比较直接的想法是 转换成自相似时间序列 。
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对于相邻周期内不相似的时间序列，比较直接的想法是 转换成自相似时间序列 。&lt;/p&gt;
 
 &lt;ul&gt;
-&lt;li&gt;拉宽时间窗口
+&lt;li&gt;&lt;p&gt;拉宽时间窗口
 以新闻插件广告位为例，由于新闻push会带来流量的飙升，而每天push的时间点又不一样，所以流量的峰值在每天都不太相同。所以分钟级的基线预测不太理想： &lt;img src=&quot;/images/ops/ts_2.png&quot; alt=&quot;note&quot; /&gt;
 如果将时间窗口拉大，比如以两个小时为例，则可以减小预测误差：
 &lt;img src=&quot;/images/ops/ts_3.png&quot; alt=&quot;note&quot; /&gt;
-拉宽时间窗口其实是 牺牲了时效性来平滑时间序列 ，所以通常不太推荐这个方法。&lt;/li&gt;
-&lt;li&gt;差分时间序列
-这里说的差分包括并不限于对时间序列作n阶差分、转换为增长率(同比或者环比)序列。
+拉宽时间窗口其实是 牺牲了时效性来平滑时间序列 ，所以通常不太推荐这个方法。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;差分时间序列：这里说的差分包括并不限于对时间序列作n阶差分、转换为增长率(同比或者环比)序列。
 以新闻banner广告为例，由于每天的客户数波动较大，所以广告曲线的振幅也不一样。
 &lt;img src=&quot;/images/ops/ts_4.png&quot; alt=&quot;note&quot; /&gt;
 但是每天曲线的升降趋势却相似，所以转换成变化速度曲线：f`(t) =( f(t)- f(t-n) )/ f(t-n), n为时间跨度。
-&lt;img src=&quot;/images/ops/ts_5.png&quot; alt=&quot;note&quot; /&gt;&lt;/li&gt;
+&lt;img src=&quot;/images/ops/ts_5.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
-&lt;h3&gt;相似波&lt;/h3&gt;
+&lt;h4&gt;监控策略 · 相似波&lt;/h4&gt;
 
 &lt;p&gt;由于广告业务的多样性和媒体的推送操作的不确定性(新闻每天不定时的push)，会导致很多维度的广告PV曲线并没有自相似性甚至毫无规律。
  &lt;img src=&quot;/images/ops/ts_6.png&quot; alt=&quot;note&quot; /&gt;
-对于这类曲线，我们监控的主要目标是 波动特性是否在合理的范围 内。所以我们抽取出曲线的波，通过和历史的正常波形进行比较来判断是否异常。&lt;/p&gt;
+对于这类非平稳曲线，我们监控的主要目标是 波动特性是否在合理的范围 内。所以我们抽取出曲线的波，通过和历史的正常波形进行比较来判断是否异常。&lt;/p&gt;
 
 &lt;h4&gt;波的度量&lt;/h4&gt;
 
@@ -127,8 +209,8 @@
 * 波谷 ：波谷和历史均值的差值超过3个标准差，则标记异常。&lt;br /&gt;&lt;/p&gt;
 </description>
         <pubDate>Tue, 20 Nov 2018 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2018/11/20/shark-monitor/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2018/11/20/shark-monitor/</guid>
+        <link>http://localhost:4000/2018/11/20/shark-monitor/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/11/20/shark-monitor/</guid>
         
         
         <category>ops</category>
@@ -136,7 +218,80 @@
       </item>
     
       <item>
-        <title>关于大数据查询系统的一些思考</title>
+        <title>大数据笔记 - 实时olap</title>
+        <description>&lt;p&gt;最近半年花了不少时间在实时olap上，业务场景是全维度实时监控，这里记录下自己的一些思考。
+对于大多数大数据底层应用，公司都有很成熟的支持中间件。比如实时消息队列(TDBANK)、KV存储(CKV)、sql on hadoop(tdw)等等。可是实时olap这个场景，基本上都是各个业务自己小规模的玩玩。之前一直想吐槽数据平台不作为，现在自己摸索了这么久才终于明白，实时olap场景的投入产出比 -- 真的有点低。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;大数据场景下的实时olap，说简单点就是极致的内存计算，极小的磁盘、网络IO。把那么多的数据全堆到内存，听起来都觉得内存和CPU在燃烧。但是实时查询的实际需求又没那么强烈。像弱olap实时查询场景：比如淘宝实时交易额、实时在线人数，其实都可以通过kv系统解决，没必要把所有数据都放内存。而全维度olap场景，sql on hadoop(spark、kylin、impala)可以很好的做到分钟级响应(秒级真有那么重要？)。
+话虽如此，但总有些绕不过去的硬需求需要真正意义上的实时olap。
+&lt;br /&gt;&lt;/p&gt;
+
+&lt;h3&gt;OVERVIEW&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;大数据场景下的olap，区别于大多数sql on hadoop解决方案(hive,spark,impala...),实时oalp(click house,druid,pinot,Vertica...)可以真正意义上做到秒级响应。这主要是因为：&lt;br&gt;
+① 定制化的数据存储、压缩、索引，可以极大的减少磁盘IO，增加内存计算。&lt;br&gt;
+② 类MPP架构，节点间极少的数据交换，网络IO最小化。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;当然，这也会带来一些限制：&lt;br&gt;
+① 特定的存储使得数据更新变得麻烦，所以很难做到数据的更新和细化删除。&lt;br&gt;
+② 不支持节点间数据交换的复杂的计算，比如大表间的join、UV计算(一般是近似计算)。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;最近半年在技术选型的时候稍微了解了下业绩的不少开源方案(click house,druid,pinot)，这里记录下click house和druid在各个环节的异同。&lt;/p&gt;
+
+&lt;h3&gt;架构&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;druid： druid的架构从某种程度来说更分布式，更'MPP'。不同的NODE负责不同的工作，且node都采用master-slave架构。所以druid在大集群下的HA表现更好，当然运维部署也会更复杂点。
+&lt;img src=&quot;/images/olap/druid.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;click house：ck从某种意义上是可扩展单机DB，专注于单机上的性能压榨，然后在meta记录集群其他节点信息。这样在运维部署相对简单，但应用层也需要做更多分布式的工作，比如入库自己需要做负载均衡。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;数据入库&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;druid：druid的数据入库相对ck来说有点重，不管是对数据约束还是服务运维。druid支持离线和在线两种入库方式，离线可以和hadoop无缝结合，实时则有专门的realtime node负责数据接入。&lt;/li&gt;
+&lt;li&gt;click house：ck则相对简单，数据入库和传统DB类似，比如jdbc连接。但是因为简单，所以应用层需要充分考虑集群的负载。&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;数据存储&lt;/h3&gt;
+
+&lt;p&gt;毫无意外，这类db都会采用列存的存储格式。因为列存可以更好的压缩数据，而且在查询时也能节省非必要的解压IO。为了在查询时快速定位数据，ch和druid都对数据作了索引。不过在&lt;em&gt;数据压缩&lt;/em&gt;、&lt;em&gt;数据索引&lt;/em&gt;、&lt;em&gt;数据备份&lt;/em&gt;方面，二者有些小的差别。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;druid：druid的存储文件格式叫segment。包含timestamp、维度(Dimensions)、指标(Metrics)三部分。segment文件采用LZ4压缩，另外还会维护一个string-&gt;int的隐射表，避免了文件中有重复的string字符串。这样做是因为int的压缩效率比string几乎多一个量级。在索引方面，druid会建个bit map做倒排，这对某些filter场景可以减少很多IO。在数据备份方面，druid有一个高效的balance策略把每个segment存储到不同节点。而且有master记录、监控每个segment的状态。
+&lt;img src=&quot;/images/olap/segment.png&quot; alt=&quot;note&quot; /&gt;
+&lt;img src=&quot;/images/olap/druid_compresion.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;click house：ck按分区存储数据，定时对分区进行merge。默认用ZSTD压缩。索引只采用了比较简单的主键稀疏索引。稀疏索引虽然更容易做数据压缩，却不能很好的减少数据读取。所以ck更多时候是做全表扫描，但是由于对主键排序和借助&lt;a href=&quot;https://zh.wikipedia.org/wiki/%E5%8D%95%E6%8C%87%E4%BB%A4%E6%B5%81%E5%A4%9A%E6%95%B0%E6%8D%AE%E6%B5%81&quot;&gt;SIMD&lt;/a&gt;,ck的读取效率其实非常高。数据备份ck做的比较静态，每个server会记录哪台server是自己的备份。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;结论&lt;/h3&gt;
+
+&lt;p&gt;这里我贴出&lt;a href=&quot;https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7&quot;&gt;大牛的对比&lt;/a&gt;。简单来说，在数据和集群规模不大的情况下，ck是一个更好的选择。
+&lt;img src=&quot;/images/olap/compare.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
+
+&lt;h3&gt;附录&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7&quot;&gt;Comparison of the Open Source OLAP Systems for Big Data: ClickHouse, Druid and Pinot&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sat, 11 Aug 2018 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2018/08/11/olap/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/08/11/olap/</guid>
+        
+        
+        <category>大数据</category>
+        
+      </item>
+    
+      <item>
+        <title>大数据笔记 - adhoc 查询平台</title>
         <description>&lt;p&gt;大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。&lt;/p&gt;
 
 &lt;!-- more --&gt;
@@ -175,20 +330,112 @@
 ① 从L(n)出发，计算得到满足覆盖率t的所有n-1规模集合L(n-1), 进一步迭代 L(n-2), L(n-3), ...L(n-k), 删选出所有满足最低覆盖率t的组合C；&lt;br&gt;
 ② 计算每个组合Ci的空间占用Vi 和收益Ri[(r1/r2)*Coverage(pattern)]；&lt;br&gt;
 ③ 转化为0\1背包问题：在满足空间限制V的情况下，选出最大收益R的集合Q。&lt;br&gt;
-简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。&lt;br&gt;
-&lt;img src=&quot;/images/hadoop/cube.png&quot; alt=&quot;note&quot; /&gt;
+简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。
+&lt;img src=&quot;/images/hadoop/cube.png&quot; alt=&quot;note&quot; /&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h2&gt;查询计划优化&lt;/h2&gt;&lt;/li&gt;
+
+&lt;h2&gt;查询计划优化&lt;/h2&gt;
+
+&lt;ul&gt;
 &lt;li&gt;分区筛选：根据业务特点可对用户查询添加特定分区筛选条件。举一个我们业务场景的case，当用户查特定广告排期(非分区字段)，我们在查询计划加上了筛选该排期下订单(分区字段)的条件，这样省略了大量非必要分区的读写IO。&lt;/li&gt;
 &lt;/ul&gt;
 
 </description>
         <pubDate>Wed, 20 Jun 2018 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2018/06/20/shark/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2018/06/20/shark/</guid>
+        <link>http://localhost:4000/2018/06/20/shark/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/06/20/shark/</guid>
         
         
         <category>大数据</category>
+        
+      </item>
+    
+      <item>
+        <title>ALGO笔记 - LR</title>
+        <description>&lt;p&gt;LR一般用来解决二分类问题，表达能力比较弱，可以简单的这样理解：LR是一个拟合因和果的算法，它认为任何结果y必定和一系列因x存在某些关系w。虽然比较朴实，但LR真的是一个万金油的算法，我们在很多工作中(CTR预估、游戏推荐、系统运维...)都用到了。因为LR：&lt;br&gt;&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;ol&gt;
+&lt;li&gt;简单、有效(数据量大到一定程度，这些模型的效果其实差别并不大), 可解释性好。&lt;/li&gt;
+&lt;li&gt;简单易部署，分布式训练算法比较成熟(在大数据场景下，训练速度快、消耗资源少)，适合online learning。&lt;/li&gt;
+&lt;li&gt;稳定。&lt;/li&gt;
+&lt;/ol&gt;
+
+
+&lt;h4&gt;基本假设&lt;/h4&gt;
+
+&lt;p&gt;线性回归假设数据服从高斯分布，所以用一个平面(线性决策边界)可以把数据分开。但现实中数据并不都是完美的高斯分布，所以逻辑回归假设数据服从伯努利分布，通过逻辑函数(Sigmoid)作一层隐射，用一个曲面(非线性决策边界)去分开数据。逻辑回归的假设函数形式如下：&lt;br&gt;
+&lt;img src=&quot;/images/lr/lr.png&quot; alt=&quot;note&quot; /&gt;
+&lt;br&gt;
+其实这就是个sigmoid函数，见下图：
+&lt;img src=&quot;/images/lr/sigmoid.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
+
+&lt;h4&gt;特征工程&lt;/h4&gt;
+
+&lt;p&gt;因为LR比较朴实，表达能力较弱，所以做LR百分之80的工作其实是在做特征工程。毕竟只有找对了&lt;em&gt;因&lt;/em&gt;，才能到达正确的&lt;em&gt;果&lt;/em&gt;。&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;归一化
+归一化可以提高收敛速度，提高收敛的精度。具体参考&lt;a href=&quot;http://www.cnblogs.com/LBSer/p/4440590.html&quot;&gt;为什么一些机器学习模型需要对数据进行归一化？&lt;/a&gt;;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;离散化
+为什么要离散化，这里直接粘贴下网上找的：
+&lt;img src=&quot;/images/lr/lisan.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;组合特征
+组合特征和特征离散化其实意义很类似，都是希望在更高阶的空间里找到划分曲面。通过组合低阶特征，提升模型的非线性表达。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;特征相关性
+训练的过程当中最好将高度相关的特征去掉：&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;去掉高度相关的特征会让模型的可解释性更好&lt;/li&gt;
+&lt;li&gt;如果模型当中有很多特征高度相关的话，就算损失函数本身收敛了，但实际上参数是没有收敛的，这样会拉低训练的速度。&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;减少特征，自然会减少训练的时间。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;GBDT&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;特征评估&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;损失函数&lt;/h4&gt;
+
+&lt;h4&gt;模型训练&lt;/h4&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;样本选择&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;GD&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;SGD&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;模型评估&lt;/h4&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;精准度&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;召回率&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;AUC&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;过拟合&amp;amp;欠拟合&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h4&gt;实现框架&lt;/h4&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;SPARK ML&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;angel&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;附录&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://blog.csdn.net/walilk/article/details/51107380&quot;&gt;Coursera ML笔记 - 逻辑回归（Logistic Regression）&lt;/a&gt;&lt;br&gt;
+&lt;a href=&quot;https://www.cnblogs.com/batys/p/3298816.html&quot;&gt;逻辑回归：使用SGD(Stochastic Gradient Descent)进行大规模机器学习&lt;/a&gt;&lt;br&gt;
+&lt;a href=&quot;https://www.jianshu.com/p/1c2569c894ce&quot;&gt;LR模型的特征归一化和离散化&lt;/a&gt;&lt;br&gt;&lt;/p&gt;
+</description>
+        <pubDate>Sat, 24 Jun 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/06/24/lr/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/06/24/lr/</guid>
+        
+        
+        <category>algorithm</category>
         
       </item>
     
@@ -276,11 +523,11 @@ spark.ui.retainedStages&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;数据源把&lt;em&gt;int&lt;/em&gt;改成&lt;em&gt;long&lt;/em&gt;类型就OK了&lt;/p&gt;
 </description>
         <pubDate>Tue, 17 May 2016 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2016/05/17/spark-watchouts/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2016/05/17/spark-watchouts/</guid>
+        <link>http://localhost:4000/2016/05/17/spark-watchouts/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/05/17/spark-watchouts/</guid>
         
         
-        <category>spark</category>
+        <category>realtime</category>
         
       </item>
     
@@ -402,11 +649,11 @@ private def writeBlocks(value: T): Int = {
 
 </description>
         <pubDate>Mon, 16 May 2016 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2016/05/16/spark-broadcast/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2016/05/16/spark-broadcast/</guid>
+        <link>http://localhost:4000/2016/05/16/spark-broadcast/</link>
+        <guid isPermaLink="true">http://localhost:4000/2016/05/16/spark-broadcast/</guid>
         
         
-        <category>spark</category>
+        <category>realtime</category>
         
       </item>
     
@@ -494,8 +741,8 @@ user-based
 这样就为&lt;a href=&quot;http://book.douban.com/subject/1041007/&quot;&gt;哈利·波特与魔法石&lt;/a&gt;找到了用户&lt;a href=&quot;http://book.douban.com/people/tuzicxy/collect&quot;&gt;tuzicxy&lt;/a&gt;、&lt;a href=&quot;http://book.douban.com/people/70621573/collect&quot;&gt;70621573&lt;/a&gt;...&lt;/p&gt;
 </description>
         <pubDate>Fri, 16 Aug 2013 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2013/08/16/recommendation-douban/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2013/08/16/recommendation-douban/</guid>
+        <link>http://localhost:4000/2013/08/16/recommendation-douban/</link>
+        <guid isPermaLink="true">http://localhost:4000/2013/08/16/recommendation-douban/</guid>
         
         
         <category>algorithm</category>
@@ -517,7 +764,7 @@ user-based
 言归正传，于是项目组决定对Mapreduce的排序进行优化。 下面是优化的笔记：
 &lt;br /&gt;
 &lt;br /&gt;
-Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如图， 首先将输出写到缓存当中。 当缓存大小达到“阈值”时（默认的大小是缓存的80%），  变会进行&#39;spill&#39;： 即sort and combiner。  sort完才会把数据写进磁盘。  坑爹的是，  根据Mapreduce的设计(hadoop1.2)， sort是个无法避免的过程。
+Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如图， 首先将输出写到缓存当中。 当缓存大小达到“阈值”时（默认的大小是缓存的80%），  变会进行'spill'： 即sort and combiner。  sort完才会把数据写进磁盘。  坑爹的是，  根据Mapreduce的设计(hadoop1.2)， sort是个无法避免的过程。
 &lt;br /&gt;
 &lt;img src=&quot;/images/hadoop/map_shuffle.jpg&quot; alt=&quot;map&quot; /&gt;&lt;/p&gt;
 
@@ -573,8 +820,8 @@ Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如
 &lt;br /&gt;storm就不一样，数据都是在内存中， task一直在监听数据， 除非kill掉(下次系统看下storm)&lt;/p&gt;
 </description>
         <pubDate>Sun, 14 Jul 2013 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2013/07/14/hadoop-sort/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2013/07/14/hadoop-sort/</guid>
+        <link>http://localhost:4000/2013/07/14/hadoop-sort/</link>
+        <guid isPermaLink="true">http://localhost:4000/2013/07/14/hadoop-sort/</guid>
         
         
         <category>大数据</category>
@@ -673,190 +920,11 @@ PCA是无监督学习  也是将所有样本映射到&lt;em&gt;sub space&lt;/em&
 &lt;img src=&quot;/images/note/ml/ml_3.jpg&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
 </description>
         <pubDate>Wed, 10 Jul 2013 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2013/07/10/note-ml/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2013/07/10/note-ml/</guid>
+        <link>http://localhost:4000/2013/07/10/note-ml/</link>
+        <guid isPermaLink="true">http://localhost:4000/2013/07/10/note-ml/</guid>
         
         
         <category>algorithm</category>
-        
-      </item>
-    
-      <item>
-        <title>排序算法笔记</title>
-        <description>&lt;h4&gt;文章排名&lt;/h4&gt;
-
-&lt;p&gt;最近工作中需要对一个CMS中的post排序进行优化, 所以临时学习了下各种文章排名算法。 而影响排序的因素无非是时间、总评数、好评、差评    ，怎么倾向则根据具体business来定。 比如电商可能会选择忽略时间效应的wilson score， 而像Hacker News就更可能会把时间考虑的比较重要。&lt;/p&gt;
-
-&lt;!-- more --&gt;
-
-
-&lt;p&gt;&lt;br /&gt;
-上笔记吧：
-&lt;br /&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/algorithm/sort_2.jpg&quot; alt=&quot;排名算法&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;排序基础&lt;/h4&gt;
-
-&lt;p&gt;顺便复习下基础的排序算法。 看过去的笔记总觉得是件开心事。&lt;/p&gt;
-
-&lt;h5&gt;冒泡、插入、选择&lt;/h5&gt;
-
-&lt;p&gt;这三个排序都需要两遍循环array， 所以时间复杂度在最坏情况下都是O(n&lt;sup&gt;2&lt;/sup&gt;), 也相对比较简单。
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/algorithm/sort_1.jpg&quot; alt=&quot;排序基础&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;快速、归并&lt;/h5&gt;
-
-&lt;p&gt;keyword: &lt;em&gt;Divide-and-Conquer&lt;/em&gt;、 &lt;em&gt;空间换时间&lt;/em&gt; 、&lt;em&gt;O(nlogn)&lt;/em&gt;
-&lt;br /&gt;
-Quick sort：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;void quick(int[] ary, int start, int end) {
-    if (start &lt; end) {
-        int index = partition(ary, start, end);
-        quick(ary, index + 1, end);
-        quick(ary, start, index - 1);
-    }
-}
-int partition(int[] ary, int left, int right) {
-    int temp = ary[left], index = left;
-    swap(ary, index, right); // 基准点后置
-    for (int i = index; i &lt; right; ++i) {
-        if (ary[i] &lt; temp)
-            swap(ary, index++, i);
-    }
-    swap(ary, index, right); // 换回基准点
-    return index;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;p&gt;Merge sort：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;void merge(int a[], int first, int last) {
-    int temp[] = new int[a.length];
-    if (first &lt; last) {
-        int mid = (first + last)  &gt;&gt; 1;
-        merge(a, first, mid);
-        merge(a, mid + 1, last);
-        memeryArray(a, first, mid, last, temp);
-    }
-}
-
-void memeryArray(int a[], int first, int mid, int last,
-        int temp[]) {
-    int i = first, j = mid + 1;
-    int m = mid, n = last;
-    int k = 0;
-
-    while (i &lt;= m &amp;&amp; j &lt;= n) {
-        if (a[i] &lt;= a[j])
-            temp[k++] = a[i++];
-        else
-            temp[k++] = a[j++];
-    }
-
-    while (i &lt;= m)
-        temp[k++] = a[i++];
-
-    while (j &lt;= n)
-        temp[k++] = a[j++];
-
-    for (i = 0; i &lt; k; i++)
-        a[first + i] = temp[i];
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-</description>
-        <pubDate>Wed, 03 Jul 2013 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2013/07/03/note-sort/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2013/07/03/note-sort/</guid>
-        
-        
-        <category>algorithm</category>
-        
-      </item>
-    
-      <item>
-        <title>上海野生动物园</title>
-        <description>&lt;p&gt;上海野生动物园, 强烈推荐啊！&lt;/p&gt;
-
-&lt;!-- more --&gt;
-
-
-&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;似乎被一直长尾猴鄙视了...
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/changweihou.jpg&quot; alt=&quot;长尾猴&quot; /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;好可爱
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/changweihou_2.jpg&quot; alt=&quot;长尾猴&quot; /&gt;
-&lt;img src=&quot;/images/travel/zoo/daishu.jpg&quot; alt=&quot;袋鼠&quot; /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;进击的金丝猴
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/jinsihou.jpg&quot; alt=&quot;金丝猴&quot; /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;胖子中的战斗机
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/daxiang.jpg&quot; alt=&quot;大象&quot; /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;见到传说中的神兽了
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/shengshou.jpg&quot; alt=&quot;神兽&quot; /&gt;&lt;/p&gt;
-
-&lt;hr /&gt;
-
-&lt;p&gt;会跳舞的熊 方便面君 小丁满
-&lt;br /&gt;
-&lt;img src=&quot;/images/travel/zoo/bear.jpg&quot; alt=&quot;bear&quot; /&gt;
-&lt;img src=&quot;/images/travel/zoo/huanxiong.jpg&quot; alt=&quot;方便面君&quot; /&gt;
-&lt;img src=&quot;/images/travel/zoo/pipi.jpg&quot; alt=&quot;丁满&quot; /&gt;&lt;/p&gt;
-</description>
-        <pubDate>Sat, 09 Mar 2013 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2013/03/09/zoo/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2013/03/09/zoo/</guid>
-        
-        
-        <category>travel</category>
-        
-      </item>
-    
-      <item>
-        <title>十一黄山看人记</title>
-        <description>&lt;p&gt;黄山是所有爬过的山中最漂亮的！&lt;/p&gt;
-
-&lt;!-- more --&gt;
-
-
-&lt;p&gt;&lt;img src=&quot;/images/travel/yellow_mountain/y_1.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_2.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_3.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_4.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_5.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_6.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_8.jpg&quot; alt=&quot;&quot; /&gt;
-&lt;img src=&quot;/images/travel/yellow_mountain/y_7.jpg&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-</description>
-        <pubDate>Mon, 01 Oct 2012 00:00:00 +0800</pubDate>
-        <link>http://dannyhnu.github.io/2012/10/01/yellow_mountain/</link>
-        <guid isPermaLink="true">http://dannyhnu.github.io/2012/10/01/yellow_mountain/</guid>
-        
-        
-        <category>travel</category>
         
       </item>
     

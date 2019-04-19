@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ALGO笔记 - LR</title>
+    <meta name="description" content="LR一般用来解决二分类问题，表达能力比较弱，可以简单的这样理解：LR是一个拟合因和果的算法，它认为任何结果y必定和一系列因x存在某些关系w。虽然比较朴实，但LR真的是一个万金油的算法，我们在很多工作中(CTR预估、游戏推荐、系统运维...)都用到了。因为LR：">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/2017/06/24/lr/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>ALGO笔记 - LR</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2017-06-24
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#algorithm" title="Category: algorithm" rel="category">algorithm</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>LR一般用来解决二分类问题，表达能力比较弱，可以简单的这样理解：LR是一个拟合因和果的算法，它认为任何结果y必定和一系列因x存在某些关系w。虽然比较朴实，但LR真的是一个万金油的算法，我们在很多工作中(CTR预估、游戏推荐、系统运维...)都用到了。因为LR：<br></p>
+
+<!-- more -->
+
+
+<ol>
+<li>简单、有效(数据量大到一定程度，这些模型的效果其实差别并不大), 可解释性好。</li>
+<li>简单易部署，分布式训练算法比较成熟(在大数据场景下，训练速度快、消耗资源少)，适合online learning。</li>
+<li>稳定。</li>
+</ol>
+
+
+<h4>基本假设</h4>
+
+<p>线性回归假设数据服从高斯分布，所以用一个平面(线性决策边界)可以把数据分开。但现实中数据并不都是完美的高斯分布，所以逻辑回归假设数据服从伯努利分布，通过逻辑函数(Sigmoid)作一层隐射，用一个曲面(非线性决策边界)去分开数据。逻辑回归的假设函数形式如下：<br>
+<img src="/images/lr/lr.png" alt="note" />
+<br>
+其实这就是个sigmoid函数，见下图：
+<img src="/images/lr/sigmoid.png" alt="note" /></p>
+
+<h4>特征工程</h4>
+
+<p>因为LR比较朴实，表达能力较弱，所以做LR百分之80的工作其实是在做特征工程。毕竟只有找对了<em>因</em>，才能到达正确的<em>果</em>。</p>
+
+<ul>
+<li><p>归一化
+归一化可以提高收敛速度，提高收敛的精度。具体参考<a href="http://www.cnblogs.com/LBSer/p/4440590.html">为什么一些机器学习模型需要对数据进行归一化？</a>;</p></li>
+<li><p>离散化
+为什么要离散化，这里直接粘贴下网上找的：
+<img src="/images/lr/lisan.png" alt="note" /></p></li>
+<li><p>组合特征
+组合特征和特征离散化其实意义很类似，都是希望在更高阶的空间里找到划分曲面。通过组合低阶特征，提升模型的非线性表达。</p></li>
+<li><p>特征相关性
+训练的过程当中最好将高度相关的特征去掉：<br></p></li>
+<li>去掉高度相关的特征会让模型的可解释性更好</li>
+<li>如果模型当中有很多特征高度相关的话，就算损失函数本身收敛了，但实际上参数是没有收敛的，这样会拉低训练的速度。</li>
+<li><p>减少特征，自然会减少训练的时间。</p></li>
+<li><p>GBDT</p></li>
+<li><p>特征评估</p></li>
+</ul>
+
+
+<h4>损失函数</h4>
+
+<h4>模型训练</h4>
+
+<ul>
+<li><p>样本选择</p></li>
+<li><p>GD</p></li>
+<li><p>SGD</p></li>
+</ul>
+
+
+<h4>模型评估</h4>
+
+<ul>
+<li><p>精准度</p></li>
+<li><p>召回率</p></li>
+<li><p>AUC</p></li>
+<li><p>过拟合&amp;欠拟合</p></li>
+</ul>
+
+
+<h4>实现框架</h4>
+
+<ul>
+<li><p>SPARK ML</p></li>
+<li><p>angel</p></li>
+</ul>
+
+
+<h3>附录</h3>
+
+<p><a href="https://blog.csdn.net/walilk/article/details/51107380">Coursera ML笔记 - 逻辑回归（Logistic Regression）</a><br>
+<a href="https://www.cnblogs.com/batys/p/3298816.html">逻辑回归：使用SGD(Stochastic Gradient Descent)进行大规模机器学习</a><br>
+<a href="https://www.jianshu.com/p/1c2569c894ce">LR模型的特征归一化和离散化</a><br></p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://localhost:4000/2017/06/24/lr/" data-title="ALGO笔记 - LR" data-url="http://localhost:4000/2017/06/24/lr/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>

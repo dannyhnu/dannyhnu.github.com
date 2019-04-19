@@ -13,8 +13,8 @@
     <link rel="icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
     <link rel="stylesheet" href=" /css/main.css ">
-    <link rel="canonical" href="http://dannyhnu.github.io/">
-    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+    <link rel="canonical" href="http://localhost:4000/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
 
 
 
@@ -89,6 +89,8 @@
                 
                     
                 
+                    
+                
             </ul>
         </nav>
     </div>
@@ -101,7 +103,64 @@
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2018/11/20/shark-monitor/">运营-监控方法笔记</a>
+                  <a class="post-link" href="/2019/01/12/spark_vs_flink/">spark vs. flink</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2019-01-12
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#realtime" title="Category: realtime" rel="category">realtime</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>先说观点，spark和flink都是目前能够一站式解决lambda架构的计算框架。因为spark出来的早，现在在活跃度、成熟度方面比flink强。flink发展相对较晚，相比spark各个细节做了很多优化。个人觉得二者是同一个世代计算框架的不同实现，细节方面会相互学习、增强。但要说谁能干掉谁，恐怕都没有这能力。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2019/01/12/spark_vs_flink/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2018/11/20/shark-monitor/">大数据笔记 - 监控系统</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
@@ -147,7 +206,8 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>我们的业务是新闻APP的广告数据，主要监控的场景是广告的pv、click和收入。</p>
+                    <p>在实际工作中经常碰到这样的监控需求，重点城市的访问流量是否有大的波动、一个广告位的ecpm是否在合理的范围内、机器的CPU利用率是否正常...
+经过一段时间case by case的支持，我们想到或许有通用的办法去解决这类问题。</p>
 
                 </div>
                 <div class="read-all">
@@ -158,7 +218,65 @@
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2018/06/20/shark/">关于大数据查询系统的一些思考</a>
+                  <a class="post-link" href="/2018/08/11/olap/">大数据笔记 - 实时olap</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2018-08-11
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>最近半年花了不少时间在实时olap上，业务场景是全维度实时监控，这里记录下自己的一些思考。
+对于大多数大数据底层应用，公司都有很成熟的支持中间件。比如实时消息队列(TDBANK)、KV存储(CKV)、sql on hadoop(tdw)等等。可是实时olap这个场景，基本上都是各个业务自己小规模的玩玩。之前一直想吐槽数据平台不作为，现在自己摸索了这么久才终于明白，实时olap场景的投入产出比 -- 真的有点低。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2018/08/11/olap/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
+                  <a class="post-link" href="/2018/06/20/shark/">大数据笔记 - adhoc 查询平台</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
@@ -215,134 +333,11 @@
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2016/05/17/spark-watchouts/">spark  - 那些坑</a>
+                  <a class="post-link" href="/2017/06/24/lr/">ALGO笔记 - LR</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2016-05-17
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-
-                    <div class="label-card">
-                    
-
-
-<!-- <span class="point">•</span> -->
-<span class="categories">
-  <i class="fa fa-th-list"></i>
-  
-    
-        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
-    
-  
-
-  <!-- <span class="point">•</span> -->
-</span>
-
-
-                    </div>
-
-                    <div class="label-card">
-                    
-<!-- <span class="point">•</span> -->
-<span class="pageTag">
-  <i class="fa fa-tags"></i>
-  
-    
-  
-
-</span>
-
-                    </div>
-                </div>
-                <div class="excerpt">
-                    <h3>JobProgressListener问题</h3>
-
-<h5>问题</h5>
-
-<p>Spark Application跑一段时间总会被yarn kill掉，报的错是</p>
-
-<pre><code>Container ... is running beyond physical memory limits. Current usage: xxx GB of xxx GB physical memory used; xx GB of xx GB virtual memory used. Killing container.</code></pre>
-
-
-
-
-                </div>
-                <div class="read-all">
-                    <a  href="/2016/05/17/spark-watchouts/"><i class="fa fa-newspaper-o"></i>Read All</a>
-                </div>
-                <hr>
-              </li>
-            
-              <li>
-                <h2>
-                  <a class="post-link" href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a>
-                </h2>
-                <div class="label">
-                    <div class="label-card">
-                        <i class="fa fa-calendar"></i>2016-05-16
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-
-                    <div class="label-card">
-                    
-
-
-<!-- <span class="point">•</span> -->
-<span class="categories">
-  <i class="fa fa-th-list"></i>
-  
-    
-        <a href="/category/#spark" title="Category: spark" rel="category">spark</a>
-    
-  
-
-  <!-- <span class="point">•</span> -->
-</span>
-
-
-                    </div>
-
-                    <div class="label-card">
-                    
-<!-- <span class="point">•</span> -->
-<span class="pageTag">
-  <i class="fa fa-tags"></i>
-  
-    
-  
-
-</span>
-
-                    </div>
-                </div>
-                <div class="excerpt">
-                    <p>最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过<strong>spark broadcast</strong>广播到各个executor进行rdd map join。</p>
-
-                </div>
-                <div class="read-all">
-                    <a  href="/2016/05/16/spark-broadcast/"><i class="fa fa-newspaper-o"></i>Read All</a>
-                </div>
-                <hr>
-              </li>
-            
-              <li>
-                <h2>
-                  <a class="post-link" href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a>
-                </h2>
-                <div class="label">
-                    <div class="label-card">
-                        <i class="fa fa-calendar"></i>2013-08-16
+                        <i class="fa fa-calendar"></i>2017-06-24
                     </div>
                     <div class="label-card">
                         
@@ -384,11 +379,11 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。</p>
+                    <p>LR一般用来解决二分类问题，表达能力比较弱，可以简单的这样理解：LR是一个拟合因和果的算法，它认为任何结果y必定和一系列因x存在某些关系w。虽然比较朴实，但LR真的是一个万金油的算法，我们在很多工作中(CTR预估、游戏推荐、系统运维...)都用到了。因为LR：<br></p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2013/08/16/recommendation-douban/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2017/06/24/lr/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
@@ -403,10 +398,10 @@
             <span class="previous disable"><i class="fa fa-angle-double-left"></i></span>
             <span class="previous disable"><i class="fa fa-angle-left"></i></span>
           
-          <span class="page_number ">1/2</span>
+          <span class="page_number ">1/3</span>
           
             <a href="/page2" class="next"><i class="fa fa-angle-right"></i></a>
-            <a href="/page2" class="next"><i class="fa fa-angle-double-right"></i></a>
+            <a href="/page3" class="next"><i class="fa fa-angle-double-right"></i></a>
           
         </div>
     </div>
@@ -420,9 +415,15 @@
                 </div>
                 <ul class="content-ul" recent>
                     
-                        <li><a href="/2018/11/20/shark-monitor/">运营-监控方法笔记</a></li>
+                        <li><a href="/2019/01/12/spark_vs_flink/">spark vs. flink</a></li>
                     
-                        <li><a href="/2018/06/20/shark/">关于大数据查询系统的一些思考</a></li>
+                        <li><a href="/2018/11/20/shark-monitor/">大数据笔记 - 监控系统</a></li>
+                    
+                        <li><a href="/2018/08/11/olap/">大数据笔记 - 实时olap</a></li>
+                    
+                        <li><a href="/2018/06/20/shark/">大数据笔记 - adhoc 查询平台</a></li>
+                    
+                        <li><a href="/2017/06/24/lr/">ALGO笔记 - LR</a></li>
                     
                         <li><a href="/2016/05/17/spark-watchouts/">spark  - 那些坑</a></li>
                     
@@ -433,12 +434,6 @@
                         <li><a href="/2013/07/14/hadoop-sort/">hadoop sort问题</a></li>
                     
                         <li><a href="/2013/07/10/note-ml/">machine learning 笔记</a></li>
-                    
-                        <li><a href="/2013/07/03/note-sort/">排序算法笔记</a></li>
-                    
-                        <li><a href="/2013/03/09/zoo/">上海野生动物园</a></li>
-                    
-                        <li><a href="/2012/10/01/yellow_mountain/">十一黄山看人记</a></li>
                     
                 </ul>
             </div>
@@ -465,7 +460,7 @@
                             <span class="name">
                                 algorithm
                             </span>
-                            <span class="badge">3</span>
+                            <span class="badge">4</span>
                         </a>
                     </li>
                     
@@ -474,16 +469,16 @@
                             <span class="name">
                                 大数据
                             </span>
-                            <span class="badge">2</span>
+                            <span class="badge">3</span>
                         </a>
                     </li>
                     
                     <li>
-                        <a href="/category/#spark" class="categories-list-item" cate="spark">
+                        <a href="/category/#realtime" class="categories-list-item" cate="realtime">
                             <span class="name">
-                                spark
+                                realtime
                             </span>
-                            <span class="badge">2</span>
+                            <span class="badge">3</span>
                         </a>
                     </li>
                     

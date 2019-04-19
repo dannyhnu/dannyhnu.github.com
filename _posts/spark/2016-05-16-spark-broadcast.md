@@ -2,7 +2,7 @@
 layout: post
 title: "spark core - Broadcast"
 description: spark广播变量
-categories : spark
+categories : realtime
 ---
 最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过**spark broadcast**广播到各个executor进行rdd map join。
 <!-- more -->

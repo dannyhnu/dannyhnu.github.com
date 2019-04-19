@@ -2,7 +2,7 @@
 layout: post
 title: "spark  - 那些坑"
 description: spark watchouts
-categories : spark
+categories : realtime
 ---
 ###JobProgressListener问题
 #####问题

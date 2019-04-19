@@ -6,15 +6,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>关于大数据查询系统的一些思考</title>
+    <title>大数据笔记 - adhoc 查询平台</title>
     <meta name="description" content="大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。">
 
     <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
     <link rel="stylesheet" href=" /css/main.css ">
-    <link rel="canonical" href="http://dannyhnu.github.io/2018/06/20/shark/">
-    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://dannyhnu.github.io /feed.xml ">
+    <link rel="canonical" href="http://localhost:4000/2018/06/20/shark/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
 
 
 
@@ -89,6 +89,8 @@
                 
                     
                 
+                    
+                
             </ul>
         </nav>
     </div>
@@ -97,7 +99,7 @@
 
         <div class="page clearfix" post>
     <div class="left">
-        <h1>关于大数据查询系统的一些思考</h1>
+        <h1>大数据笔记 - adhoc 查询平台</h1>
         <div class="label">
 
             <div class="label-card">
@@ -185,10 +187,14 @@
 ① 从L(n)出发，计算得到满足覆盖率t的所有n-1规模集合L(n-1), 进一步迭代 L(n-2), L(n-3), ...L(n-k), 删选出所有满足最低覆盖率t的组合C；<br>
 ② 计算每个组合Ci的空间占用Vi 和收益Ri[(r1/r2)*Coverage(pattern)]；<br>
 ③ 转化为0\1背包问题：在满足空间限制V的情况下，选出最大收益R的集合Q。<br>
-简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。<br>
-<img src="/images/hadoop/cube.png" alt="note" />
+简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。
+<img src="/images/hadoop/cube.png" alt="note" /></li>
+</ul>
 
-<h2>查询计划优化</h2></li>
+
+<h2>查询计划优化</h2>
+
+<ul>
 <li>分区筛选：根据业务特点可对用户查询添加特定分区筛选条件。举一个我们业务场景的case，当用户查特定广告排期(非分区字段)，我们在查询计划加上了筛选该排期下订单(分区字段)的条件，这样省略了大量非必要分区的读写IO。</li>
 </ul>
 
@@ -224,13 +230,16 @@
             
             
         
+            
+            
+        
         
 
 
         <h2 id="comments">Comments</h2>
         
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="http://dannyhnu.github.io/2018/06/20/shark/" data-title="关于大数据查询系统的一些思考" data-url="http://dannyhnu.github.io/2018/06/20/shark/"></div>
+<div class="ds-thread" data-thread-key="http://localhost:4000/2018/06/20/shark/" data-title="大数据笔记 - adhoc 查询平台" data-url="http://localhost:4000/2018/06/20/shark/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
