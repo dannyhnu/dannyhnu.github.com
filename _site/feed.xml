@@ -5,8 +5,8 @@
     <description></description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 19 Apr 2019 15:08:13 +0800</pubDate>
-    <lastBuildDate>Fri, 19 Apr 2019 15:08:13 +0800</lastBuildDate>
+    <pubDate>Wed, 24 Apr 2019 16:31:45 +0800</pubDate>
+    <lastBuildDate>Wed, 24 Apr 2019 16:31:45 +0800</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
       <item>
@@ -378,49 +378,56 @@
 &lt;p&gt;因为LR比较朴实，表达能力较弱，所以做LR百分之80的工作其实是在做特征工程。毕竟只有找对了&lt;em&gt;因&lt;/em&gt;，才能到达正确的&lt;em&gt;果&lt;/em&gt;。&lt;/p&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;归一化
-归一化可以提高收敛速度，提高收敛的精度。具体参考&lt;a href=&quot;http://www.cnblogs.com/LBSer/p/4440590.html&quot;&gt;为什么一些机器学习模型需要对数据进行归一化？&lt;/a&gt;;&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;离散化
+&lt;li&gt;&lt;p&gt;归一化:
+归一化可以提高收敛速度，提高收敛的精度。具体参考&lt;a href=&quot;http://www.cnblogs.com/LBSer/p/4440590.html&quot;&gt;为什么一些机器学习模型需要对数据进行归一化？&lt;/a&gt;。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;离散化:
 为什么要离散化，这里直接粘贴下网上找的：
 &lt;img src=&quot;/images/lr/lisan.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;组合特征
+&lt;li&gt;&lt;p&gt;组合特征:
 组合特征和特征离散化其实意义很类似，都是希望在更高阶的空间里找到划分曲面。通过组合低阶特征，提升模型的非线性表达。&lt;/p&gt;&lt;/li&gt;
 &lt;li&gt;&lt;p&gt;特征相关性
-训练的过程当中最好将高度相关的特征去掉：&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;去掉高度相关的特征会让模型的可解释性更好&lt;/li&gt;
-&lt;li&gt;如果模型当中有很多特征高度相关的话，就算损失函数本身收敛了，但实际上参数是没有收敛的，这样会拉低训练的速度。&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;减少特征，自然会减少训练的时间。&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;GBDT&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;特征评估&lt;/p&gt;&lt;/li&gt;
+训练的过程当中最好将高度相关的特征去掉：&lt;br&gt;
+1) 去掉高度相关的特征会让模型的可解释性更好。&lt;br&gt;
+2) 如果模型当中有很多特征高度相关的话，就算损失函数本身收敛了，但实际上参数是没有收敛的，这样会拉低训练的速度。&lt;br&gt;
+3) 减少特征，自然会减少训练的时间。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;GBDT: 在处理特征离散化和组合特征的过程中有些问题需要人工经验来确定，比如&lt;br&gt;
+1) 连续变量切分点如何选取？&lt;br&gt;
+2) 离散化为多少份合理？&lt;br&gt;
+3) 选择哪些特征交叉？多少阶交叉，二阶，三阶或更多？&lt;br&gt;
+gbdt对于数据离散，会根据信息增益，客观的选取切分点和份数。而gbdt的叶子节点，其实就是特征组合的结果。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;特征评估: 评估特征好坏的方法有ABtest，卡方检验，单特征AUC等。比较保险点办法就是在ab test系统去测试新加某个维度带来的ctr变化。&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
 &lt;h3&gt;损失函数&lt;/h3&gt;
 
+&lt;p&gt;损失函数衡量的是实际值和预估值的差异。所以有很多函数可以来衡量这个距离：&lt;br&gt;
+&lt;img src=&quot;/images/lr/cost.png&quot; alt=&quot;note&quot; /&gt;
+LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1−hθ(x))。原因参考&lt;a href=&quot;https://www.jianshu.com/p/1bf35d61995f&quot;&gt;这里&lt;/a&gt;。&lt;/p&gt;
+
 &lt;h3&gt;模型训练&lt;/h3&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;样本选择&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;GD&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;SGD&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;样本均衡: LR对样本均衡比较敏感，所以尽量还是保证正负样本1:1的比例。如果样本不均衡，可以参考&lt;a href=&quot;https://www.zhihu.com/question/56662976&quot;&gt;这里&lt;/a&gt;的方法。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;GD -&gt; BGD -&gt; SGD: lr的训练过程其实是一个无约束问题的求解过程：求最小的θ，使得损失函数最小。常见的最优化方法有梯度下降法、牛顿法和拟牛顿法、共轭梯度法等。&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
 &lt;h3&gt;模型评估&lt;/h3&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;精准度&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;召回率&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;AUC&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;过拟合&amp;amp;欠拟合&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;精准度:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;召回率:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;AUC:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;过拟合&amp;amp;欠拟合:&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
 &lt;h3&gt;实现框架&lt;/h3&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;SPARK ML&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;angel&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;SPARK ML:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;angel:&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
