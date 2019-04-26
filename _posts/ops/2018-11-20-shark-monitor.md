@@ -32,7 +32,7 @@ categories : ops
     d(ti) = stdev(linearScale(ti))， 0 < i < n
     sim(t) = mean(d(t1),d(t2)..d(tn))
 
-![note](/images/ops/sim.PNG)<br>
+![note](/images/ops/sim.png)<br>
 当一条曲线在不同周期内的距离越小，我们认为这条曲线自相似性越高。<br>
 ![note](/images/ops/dis.PNG)
 
