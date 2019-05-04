@@ -5,8 +5,8 @@
     <description></description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 24 Apr 2019 16:31:45 +0800</pubDate>
-    <lastBuildDate>Wed, 24 Apr 2019 16:31:45 +0800</lastBuildDate>
+    <pubDate>Sat, 04 May 2019 18:55:44 +0800</pubDate>
+    <lastBuildDate>Sat, 04 May 2019 18:55:44 +0800</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
       <item>
@@ -117,7 +117,7 @@
 &lt;/ul&gt;
 
 
-&lt;p&gt;&lt;img src=&quot;/images/ops/sim.PNG&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;
+&lt;p&gt;&lt;img src=&quot;/images/ops/sim.png&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;
 当一条曲线在不同周期内的距离越小，我们认为这条曲线自相似性越高。&lt;br&gt;
 &lt;img src=&quot;/images/ops/dis.PNG&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
 
@@ -282,8 +282,8 @@
 &lt;p&gt;&lt;a href=&quot;https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7&quot;&gt;Comparison of the Open Source OLAP Systems for Big Data: ClickHouse, Druid and Pinot&lt;/a&gt;&lt;/p&gt;
 </description>
         <pubDate>Sat, 11 Aug 2018 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2018/08/11/olap/</link>
-        <guid isPermaLink="true">http://localhost:4000/2018/08/11/olap/</guid>
+        <link>http://localhost:4000/2018/08/11/realtime_olap/</link>
+        <guid isPermaLink="true">http://localhost:4000/2018/08/11/realtime_olap/</guid>
         
         
         <category>大数据</category>
@@ -291,18 +291,17 @@
       </item>
     
       <item>
-        <title>大数据笔记 - adhoc 查询平台</title>
-        <description>&lt;p&gt;大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。&lt;/p&gt;
+        <title>大数据笔记 - 大数据计算框架</title>
+        <description>&lt;p&gt;大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。&lt;br&gt;&lt;/p&gt;
 
 &lt;!-- more --&gt;
 
 
-&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/images/hadoop/framework.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
 
 &lt;h2&gt;技术选型&lt;/h2&gt;
 
-&lt;pre&gt;&lt;code&gt;对大数据查询平台的技术选型，可以从存储和计算两个方面结合自身业务来衡量。
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对大数据查询平台的技术选型，可以从存储和计算两个方面结合自身业务来衡量。&lt;/p&gt;
 
 &lt;h3&gt;存储&lt;/h3&gt;
 
@@ -321,17 +320,16 @@
 
 &lt;h2&gt;数据预处理&lt;/h2&gt;
 
-&lt;pre&gt;&lt;code&gt;对于数据计算过程最耗IO的两个步骤：JOIN和GROUP BY，可以在数据预处理阶段节省计算过程的IO。
-&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对于数据计算过程最耗IO的两个步骤：JOIN和GROUP BY，可以在数据预处理阶段节省计算过程的IO。&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;预JOIN：大宽表设计，可以省掉计算过程的join IO，这个可能是比较常用的操作，就不多赘述。可能需要考虑的一点是对于经常变动的业务字段，不太适合预JOIN，因为重跑历史数据真的是非常头疼。所以预join的字段最好是不常变动的。&lt;/li&gt;
-&lt;li&gt;数据CUBE：预先group by，简单来说就是空间换时间。具体可以参考apache kylin。但是在海量、高维度的业务场景下，野蛮预建cube的存储代价太大。所以我们提出一种基于组合优化的物化cube智能生成方法：
+&lt;li&gt;数据CUBE：预先group by，简单来说就是空间换时间。apache kylin运用的就是这个方法。但是在海量、高维度的业务场景下，野蛮预建cube的存储代价太大。所以我们提出一种基于组合优化的物化cube智能生成方法：
 ① 从L(n)出发，计算得到满足覆盖率t的所有n-1规模集合L(n-1), 进一步迭代 L(n-2), L(n-3), ...L(n-k), 删选出所有满足最低覆盖率t的组合C；&lt;br&gt;
 ② 计算每个组合Ci的空间占用Vi 和收益Ri[(r1/r2)*Coverage(pattern)]；&lt;br&gt;
 ③ 转化为0\1背包问题：在满足空间限制V的情况下，选出最大收益R的集合Q。&lt;br&gt;
-简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。
-&lt;img src=&quot;/images/hadoop/cube.png&quot; alt=&quot;note&quot; /&gt;&lt;/li&gt;
+简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。&lt;br&gt;
+&lt;img src=&quot;/images/hadoop/cube.PNG&quot; alt=&quot;note&quot; /&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
@@ -345,6 +343,52 @@
         <pubDate>Wed, 20 Jun 2018 00:00:00 +0800</pubDate>
         <link>http://localhost:4000/2018/06/20/shark/</link>
         <guid isPermaLink="true">http://localhost:4000/2018/06/20/shark/</guid>
+        
+        
+        <category>大数据</category>
+        
+      </item>
+    
+      <item>
+        <title>大数据笔记 - olap</title>
+        <description>&lt;p&gt;OLAP(联机分析处理)只是一个概念，但背后是一个数据系统，包括数据接入、数据仓库的建设、数据服务(ad hoc查询、可视化、数据挖掘...)。&lt;/p&gt;
+
+&lt;!-- more --&gt;
+
+
+&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
+
+&lt;h3&gt;数据仓库&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;数据分层：数据为什么要分层存储？&lt;br&gt;
+① 原始数据和应用数据的解耦，使得数据结构更加清晰，也能使得原始业务和应用层的变动不会相互影响。&lt;br&gt;
+② 减少重复的数据开发，使得很多对外的数据输出可以复用，也能保证对外数据的一致性。&lt;br&gt;
+至于怎么分层，业界比较常见的分层方法是：ods（原始日志层）-&gt; dw（数据仓库层）-&gt; dm（数据集市层）-&gt; app（数据产品层）。个人觉得还是看业务本身的复杂性，根据以往的经验，层数往往和运维的复杂度成正比。所以没有必要为了分层而分层，简单好用才是王道。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;数据模型：传统DB可能多采用关系建模(ER建模)，严格符合3范式。这种约束对于在大数据的场景可能过于严格，所以大数据仓库多采用维度建模。而维度模型最常见的是：
+① 星形模型。事实表+一级维度表，可读性好，易维护，聚合查询效率高。&lt;br&gt;
+② 雪花模型。事实表+多级维度表。数据冗余少，后期维护较复杂。&lt;br&gt;
+对于olap查询系统，个人倾向于星形模型，简单易用，可以省去很多麻烦(所以kylin才会只支持星形)。贴一下网上找的模型对比:&lt;br&gt;
+&lt;img src=&quot;/images/hadoop/model.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;元数据(meta)管理：&lt;br&gt;
+1) 数据分区？&lt;br&gt;
+2) 数据cube？&lt;br&gt;
+3) 数据视图？&lt;br&gt;
+4) 历史回溯？&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h3&gt;ETL // TODO&lt;/h3&gt;
+
+&lt;h3&gt;olap框架 // TODO&lt;/h3&gt;
+
+&lt;h3&gt;附录&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://blog.csdn.net/u010454030/article/details/74589791&quot;&gt;理解数据仓库中星型模型和雪花模型）&lt;/a&gt;&lt;br&gt;&lt;/p&gt;
+</description>
+        <pubDate>Thu, 21 Sep 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/09/21/olap/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/09/21/olap/</guid>
         
         
         <category>大数据</category>
@@ -409,25 +453,17 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
 
 &lt;ul&gt;
 &lt;li&gt;&lt;p&gt;样本均衡: LR对样本均衡比较敏感，所以尽量还是保证正负样本1:1的比例。如果样本不均衡，可以参考&lt;a href=&quot;https://www.zhihu.com/question/56662976&quot;&gt;这里&lt;/a&gt;的方法。&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;GD -&gt; BGD -&gt; SGD: lr的训练过程其实是一个无约束问题的求解过程：求最小的θ，使得损失函数最小。常见的最优化方法有梯度下降法、牛顿法和拟牛顿法、共轭梯度法等。&lt;/p&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-
-&lt;h3&gt;模型评估&lt;/h3&gt;
-
-&lt;ul&gt;
-&lt;li&gt;&lt;p&gt;精准度:&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;召回率:&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;AUC:&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;过拟合&amp;amp;欠拟合:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;模型训练: lr的训练过程其实是一个无约束问题的求解过程：求最小的θ，使得损失函数最小。常见的最优化方法有梯度下降法、牛顿法和拟牛顿法、共轭梯度法等。GD -&gt; BGD -&gt; SGD。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;模型评估:  // TODO&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;过拟合&amp;amp;欠拟合: // TODO&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
 &lt;h3&gt;实现框架&lt;/h3&gt;
 
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;SPARK ML:&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;angel:&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;SPARK ML: // TODO&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;angel: // TODO&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
@@ -832,106 +868,6 @@ Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如
         
         
         <category>大数据</category>
-        
-      </item>
-    
-      <item>
-        <title>machine learning 笔记</title>
-        <description>&lt;p&gt;接触&lt;strong&gt;machine learning&lt;/strong&gt;一年多了 也攒了不少笔记 话说期间各种算法都有接触过 分类 聚类  推荐 降维...  或许是research的不够深入的原因吧  我发现其实大多数算法都可以用一句话概况&lt;/p&gt;
-
-&lt;!-- more --&gt;
-
-
-&lt;p&gt;&lt;br /&gt;&lt;/p&gt;
-
-&lt;h4&gt;分类&lt;/h4&gt;
-
-&lt;h5&gt;Bayesian&lt;/h5&gt;
-
-&lt;p&gt;最有可能属于哪一类
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/bayesian.jpg&quot; alt=&quot;bayesian&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;SVM&lt;/h5&gt;
-
-&lt;p&gt;找出一个能划分两个类的超平面
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/svm.jpg&quot; alt=&quot;SVM&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;Decision tree&lt;/h5&gt;
-
-&lt;p&gt;每个枝上选一个维度去划分节点上的所有样本
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/dt.jpg&quot; alt=&quot;decision tree&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;ANN&lt;/h5&gt;
-
-&lt;p&gt;函数黑盒  这个似乎有点高深  现在也不知道能不能再推出来
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/ann_1.jpg&quot; alt=&quot;ANN&quot; /&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/ann_2.jpg&quot; alt=&quot;ANN&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;距离&lt;/h4&gt;
-
-&lt;p&gt;各种距离  最常用的是欧式和余弦  可能根据应用场景的不同有些差异  比如 点 p(5, 5), p(1, 1) 和 p(0, 0)之间的距离。 这种差异可以通过归一化来handle
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/dis.jpg&quot; alt=&quot;distance&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;聚类&lt;/h4&gt;
-
-&lt;h5&gt;kmeans&lt;/h5&gt;
-
-&lt;p&gt;最基础的聚类算法  &lt;em&gt;选中心点&lt;/em&gt;  &lt;em&gt;不停的迭代&lt;/em&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/kmeans.jpg&quot; alt=&quot;kmeans&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;Spectral&lt;/h5&gt;
-
-&lt;p&gt;谱聚类
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/spectral_1.jpg&quot; alt=&quot;spectral&quot; /&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/spectral_2.jpg&quot; alt=&quot;spectral&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;降维&lt;/h4&gt;
-
-&lt;p&gt;LDA是监督学习  将不同的样本映射到&lt;em&gt;sub space&lt;/em&gt;上  使得不同label之间的方差最大化 但是同一label内的样本尽量靠近各自的中心
-&lt;br /&gt;
-PCA是无监督学习  也是将所有样本映射到&lt;em&gt;sub space&lt;/em&gt;上 不同的是降维后使得所有样本的方程最大化
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/pca_1.jpg&quot; alt=&quot;pca&quot; /&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/pca_2.jpg&quot; alt=&quot;pca&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;推荐&lt;/h4&gt;
-
-&lt;p&gt;基于内容的  基于协同的  还有关联规则的&lt;/p&gt;
-
-&lt;h5&gt;关联规则&lt;/h5&gt;
-
-&lt;p&gt;&lt;em&gt;支持度&lt;/em&gt;  &lt;em&gt;置信度&lt;/em&gt; &lt;em&gt;频繁项集&lt;/em&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/asso.jpg&quot; alt=&quot;asso&quot; /&gt;&lt;/p&gt;
-
-&lt;h5&gt;条件概率&lt;/h5&gt;
-
-&lt;p&gt;阿里技术博客上看到的 很简单的based on&lt;strong&gt;条件概率&lt;/strong&gt;的 推荐
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/rec_ali.jpg&quot; alt=&quot;ali&quot; /&gt;&lt;/p&gt;
-
-&lt;h4&gt;Note&lt;/h4&gt;
-
-&lt;p&gt;不记得哪里看到的一条机器学习的三维
-&lt;br /&gt;
-&lt;img src=&quot;/images/note/ml/ml_3.jpg&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;
-</description>
-        <pubDate>Wed, 10 Jul 2013 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2013/07/10/note-ml/</link>
-        <guid isPermaLink="true">http://localhost:4000/2013/07/10/note-ml/</guid>
-        
-        
-        <category>algorithm</category>
         
       </item>
     

@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>大数据笔记 - adhoc 查询平台</title>
+    <title>大数据笔记 - 大数据计算框架</title>
     <meta name="description" content="大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。">
 
     <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
@@ -99,7 +99,7 @@
 
         <div class="page clearfix" post>
     <div class="left">
-        <h1>大数据笔记 - adhoc 查询平台</h1>
+        <h1>大数据笔记 - 大数据计算框架</h1>
         <div class="label">
 
             <div class="label-card">
@@ -149,17 +149,16 @@
         </div>
         <hr>
         <article itemscope itemtype="http://schema.org/BlogPosting">
-        <p>大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。</p>
+        <p>大数据计算框架日新月异，而每次计算效率的大幅提升，简单总结就一句话：IO优化。不管是存储，还是计算的优化，都是更少的磁盘IO，更多的内存IO。本文结合本人在自身工作中的经验，主要讲一下对大数据计算效率上的一些思考。<br></p>
 
 <!-- more -->
 
 
-<p><br /></p>
+<p><img src="/images/hadoop/framework.png" alt="note" /></p>
 
 <h2>技术选型</h2>
 
-<pre><code>对大数据查询平台的技术选型，可以从存储和计算两个方面结合自身业务来衡量。
-</code></pre>
+<p>对大数据查询平台的技术选型，可以从存储和计算两个方面结合自身业务来衡量。</p>
 
 <h3>存储</h3>
 
@@ -178,17 +177,16 @@
 
 <h2>数据预处理</h2>
 
-<pre><code>对于数据计算过程最耗IO的两个步骤：JOIN和GROUP BY，可以在数据预处理阶段节省计算过程的IO。
-</code></pre>
+<p>对于数据计算过程最耗IO的两个步骤：JOIN和GROUP BY，可以在数据预处理阶段节省计算过程的IO。</p>
 
 <ul>
 <li>预JOIN：大宽表设计，可以省掉计算过程的join IO，这个可能是比较常用的操作，就不多赘述。可能需要考虑的一点是对于经常变动的业务字段，不太适合预JOIN，因为重跑历史数据真的是非常头疼。所以预join的字段最好是不常变动的。</li>
-<li>数据CUBE：预先group by，简单来说就是空间换时间。具体可以参考apache kylin。但是在海量、高维度的业务场景下，野蛮预建cube的存储代价太大。所以我们提出一种基于组合优化的物化cube智能生成方法：
+<li>数据CUBE：预先group by，简单来说就是空间换时间。apache kylin运用的就是这个方法。但是在海量、高维度的业务场景下，野蛮预建cube的存储代价太大。所以我们提出一种基于组合优化的物化cube智能生成方法：
 ① 从L(n)出发，计算得到满足覆盖率t的所有n-1规模集合L(n-1), 进一步迭代 L(n-2), L(n-3), ...L(n-k), 删选出所有满足最低覆盖率t的组合C；<br>
 ② 计算每个组合Ci的空间占用Vi 和收益Ri[(r1/r2)*Coverage(pattern)]；<br>
 ③ 转化为0\1背包问题：在满足空间限制V的情况下，选出最大收益R的集合Q。<br>
-简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。
-<img src="/images/hadoop/cube.png" alt="note" /></li>
+简单来说，就是根据历史查询选出综合考虑查询覆盖和空间占用的最佳组合。下图是查询是否命中cube的时间对比。<br>
+<img src="/images/hadoop/cube.PNG" alt="note" /></li>
 </ul>
 
 
@@ -239,7 +237,7 @@
         <h2 id="comments">Comments</h2>
         
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="http://localhost:4000/2018/06/20/shark/" data-title="大数据笔记 - adhoc 查询平台" data-url="http://localhost:4000/2018/06/20/shark/"></div>
+<div class="ds-thread" data-thread-key="http://localhost:4000/2018/06/20/shark/" data-title="大数据笔记 - 大数据计算框架" data-url="http://localhost:4000/2018/06/20/shark/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">

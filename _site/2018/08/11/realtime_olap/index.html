@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>大数据笔记 - 实时olap</title>
+    <meta name="description" content="最近半年花了不少时间在实时olap上，业务场景是全维度实时监控，这里记录下自己的一些思考。对于大多数大数据底层应用，公司都有很成熟的支持中间件。比如实时消息队列(TDBANK)、KV存储(CKV)、sql on hadoop(tdw)等等。可是实时olap这个场景，基本上都是各个业务自己小规模的玩玩。之前一直想吐...">
+
+    <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico?" type="image/x-icon">
+    <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
+    <link rel="stylesheet" href=" /css/main.css ">
+    <link rel="canonical" href="http://localhost:4000/2018/08/11/realtime_olap/">
+    <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
+
+
+
+    <script>
+    // google analytics
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-50349546-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+
+</head>
+
+
+  <body>
+
+    <header id="top">
+    <div class="wrapper">
+        <a href="/" class="brand">Dan</a>
+        <small></small>
+        <button id="headerMenu" class="menu"><i class="fa fa-bars"></i></button>
+        <nav id="headerNav">
+            <ul>
+                <li>
+                    
+                    <a href="/">
+                    
+                        <i class="fa fa-home"></i>Home
+                    </a>
+                </li>
+
+                
+                    
+                    <li>
+                        
+                        <a href="/archive/">
+                        
+                            <i class="fa fa-archive"></i>Archives
+                        </a>
+                    </li>
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/category/">
+                        
+                            <i class="fa fa-th-list"></i>Categories
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                    <li>
+                        
+                        <a href="/about/">
+                        
+                            <i class="fa fa-user"></i>About
+                        </a>
+                    </li>
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+        <div class="page clearfix" post>
+    <div class="left">
+        <h1>大数据笔记 - 实时olap</h1>
+        <div class="label">
+
+            <div class="label-card">
+                <i class="fa fa-calendar"></i>2018-08-11
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+                
+            </div>
+
+            <div class="label-card">
+            
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+            </div>
+
+            <div class="label-card">
+            
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+            </div>
+
+        </div>
+        <hr>
+        <article itemscope itemtype="http://schema.org/BlogPosting">
+        <p>最近半年花了不少时间在实时olap上，业务场景是全维度实时监控，这里记录下自己的一些思考。
+对于大多数大数据底层应用，公司都有很成熟的支持中间件。比如实时消息队列(TDBANK)、KV存储(CKV)、sql on hadoop(tdw)等等。可是实时olap这个场景，基本上都是各个业务自己小规模的玩玩。之前一直想吐槽数据平台不作为，现在自己摸索了这么久才终于明白，实时olap场景的投入产出比 -- 真的有点低。</p>
+
+<!-- more -->
+
+
+<p>大数据场景下的实时olap，说简单点就是极致的内存计算，极小的磁盘、网络IO。把那么多的数据全堆到内存，听起来都觉得内存和CPU在燃烧。但是实时查询的实际需求又没那么强烈。像弱olap实时查询场景：比如淘宝实时交易额、实时在线人数，其实都可以通过kv系统解决，没必要把所有数据都放内存。而全维度olap场景，sql on hadoop(spark、kylin、impala)可以很好的做到分钟级响应(秒级真有那么重要？)。
+话虽如此，但总有些绕不过去的硬需求需要真正意义上的实时olap。
+<br /></p>
+
+<h3>OVERVIEW</h3>
+
+<ul>
+<li><p>大数据场景下的olap，区别于大多数sql on hadoop解决方案(hive,spark,impala...),实时oalp(click house,druid,pinot,Vertica...)可以真正意义上做到秒级响应。这主要是因为：<br>
+① 定制化的数据存储、压缩、索引，可以极大的减少磁盘IO，增加内存计算。<br>
+② 类MPP架构，节点间极少的数据交换，网络IO最小化。<br></p></li>
+<li><p>当然，这也会带来一些限制：<br>
+① 特定的存储使得数据更新变得麻烦，所以很难做到数据的更新和细化删除。<br>
+② 不支持节点间数据交换的复杂的计算，比如大表间的join、UV计算(一般是近似计算)。<br></p></li>
+</ul>
+
+
+<p>最近半年在技术选型的时候稍微了解了下业绩的不少开源方案(click house,druid,pinot)，这里记录下click house和druid在各个环节的异同。</p>
+
+<h3>架构</h3>
+
+<ul>
+<li><p>druid： druid的架构从某种程度来说更分布式，更'MPP'。不同的NODE负责不同的工作，且node都采用master-slave架构。所以druid在大集群下的HA表现更好，当然运维部署也会更复杂点。
+<img src="/images/olap/druid.png" alt="note" /></p></li>
+<li><p>click house：ck从某种意义上是可扩展单机DB，专注于单机上的性能压榨，然后在meta记录集群其他节点信息。这样在运维部署相对简单，但应用层也需要做更多分布式的工作，比如入库自己需要做负载均衡。</p></li>
+</ul>
+
+
+<h3>数据入库</h3>
+
+<ul>
+<li>druid：druid的数据入库相对ck来说有点重，不管是对数据约束还是服务运维。druid支持离线和在线两种入库方式，离线可以和hadoop无缝结合，实时则有专门的realtime node负责数据接入。</li>
+<li>click house：ck则相对简单，数据入库和传统DB类似，比如jdbc连接。但是因为简单，所以应用层需要充分考虑集群的负载。</li>
+</ul>
+
+
+<h3>数据存储</h3>
+
+<p>毫无意外，这类db都会采用列存的存储格式。因为列存可以更好的压缩数据，而且在查询时也能节省非必要的解压IO。为了在查询时快速定位数据，ch和druid都对数据作了索引。不过在<em>数据压缩</em>、<em>数据索引</em>、<em>数据备份</em>方面，二者有些小的差别。</p>
+
+<ul>
+<li><p>druid：druid的存储文件格式叫segment。包含timestamp、维度(Dimensions)、指标(Metrics)三部分。segment文件采用LZ4压缩，另外还会维护一个string->int的隐射表，避免了文件中有重复的string字符串。这样做是因为int的压缩效率比string几乎多一个量级。在索引方面，druid会建个bit map做倒排，这对某些filter场景可以减少很多IO。在数据备份方面，druid有一个高效的balance策略把每个segment存储到不同节点。而且有master记录、监控每个segment的状态。
+<img src="/images/olap/segment.png" alt="note" />
+<img src="/images/olap/druid_compresion.png" alt="note" /></p></li>
+<li><p>click house：ck按分区存储数据，定时对分区进行merge。默认用ZSTD压缩。索引只采用了比较简单的主键稀疏索引。稀疏索引虽然更容易做数据压缩，却不能很好的减少数据读取。所以ck更多时候是做全表扫描，但是由于对主键排序和借助<a href="https://zh.wikipedia.org/wiki/%E5%8D%95%E6%8C%87%E4%BB%A4%E6%B5%81%E5%A4%9A%E6%95%B0%E6%8D%AE%E6%B5%81">SIMD</a>,ck的读取效率其实非常高。数据备份ck做的比较静态，每个server会记录哪台server是自己的备份。</p></li>
+</ul>
+
+
+<h3>结论</h3>
+
+<p>这里我贴出<a href="https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7">大牛的对比</a>。简单来说，在数据和集群规模不大的情况下，ck是一个更好的选择。
+<img src="/images/olap/compare.png" alt="note" /></p>
+
+<h3>附录</h3>
+
+<p><a href="https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7">Comparison of the Open Source OLAP Systems for Big Data: ClickHouse, Druid and Pinot</a></p>
+
+        </article>
+        <hr>
+        
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+            
+            
+        
+        
+
+
+        <h2 id="comments">Comments</h2>
+        
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="http://localhost:4000/2018/08/11/realtime_olap/" data-title="大数据笔记 - 实时olap" data-url="http://localhost:4000/2018/08/11/realtime_olap/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+    var duoshuoQuery = {
+        short_name: "dannyhnu"
+    };
+    (function() {
+        var ds = document.createElement('script');
+        ds.type = 'text/javascript';
+        ds.async = true;
+        ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+        ds.charset = 'UTF-8';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+</script>
+<!-- 多说公共JS代码 end -->
+
+
+
+
+
+
+    </div>
+    <button class="anchor"><i class="fa fa-anchor"></i></button>
+    <div class="right">
+        <div class="wrap">
+
+            <!-- Content -->
+            <div class="side content">
+                <div>
+                    Content
+                </div>
+                <ul id="content-side" class="content-ul">
+                    <li><a href="#similar_posts">Similar Posts</a></li>
+                    <li><a href="#comments">Comments</a></li>
+                </ul>
+            </div>
+            <!-- 其他div框放到这里 -->
+            <!-- <div class="side">bbbb</div> -->
+        </div>
+    </div>
+</div>
+<script>
+/**
+ * target _blank
+ */
+(function() {
+    var aTags = document.querySelectorAll('article a:not([id])')
+    for (var i = 0; i < aTags.length; i++) {
+        aTags[i].setAttribute('target', '_blank')
+    }
+}());
+</script>
+<script src="/js/pageContent.js " charset="utf-8"></script>
+
+
+    <footer class="site-footer">
+
+
+    <div class="wrapper">
+
+        <p class="description">
+             Simple is powerful! 
+        </p>
+        <p class="contact">
+            Contact me at: 
+            <a href="https://github.com/dannyhnu"><i class="fa fa-github" aria-hidden="true"></i></a>  
+            <a href="mailto:dannyhnu@126.com"><i class="fa fa-envelope-o" aria-hidden="true"></i></a>  
+            <a href="http://weibo.com/dan"><i class="fa fa-weibo" aria-hidden="true"></i></a>    
+        </p>
+        <p class="power">
+            <span>
+                Site powered by <a href="https://jekyllrb.com/">Jekyll</a> & <a href="https://pages.github.com/">Github Pages</a>.
+            </span>
+        </p>
+    </div>
+</footer>
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <div class="back-to-top">
+    <a href="#top" class="scroll">
+        <i class="fa fa-arrow-up" aria-hidden="true"></i>
+    </a>
+</div>
+
+    <script src=" /js/main.js " charset="utf-8"></script>
+    <script src=" /js/scroll.min.js " charset="utf-8"></script>
+  </body>
+
+</html>
