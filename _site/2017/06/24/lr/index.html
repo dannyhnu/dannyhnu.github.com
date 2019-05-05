@@ -213,9 +213,15 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
 
 <h3>实现框架</h3>
 
+<p>SGD的分布式实现一直是业界比较关注的问题, 而问题的本质就是怎么减少进程间订单通讯开销、提高高维数据下的可扩展性。</p>
+
 <ul>
-<li><p>SPARK ML: // TODO</p></li>
-<li><p>angel: // TODO</p></li>
+<li><p>tree all reduce: spark的实现方式，两阶段树分裂算法。每次迭代会把所有参数广播到各个节点，然后分两阶段reduce到driver汇总更新。不管是速度，还是可扩展性，这种实现方式都比较差，所以spark的MLLib一直被人诟病。
+<img src="/images/lr/spark_sgd.png" alt="note" /></p></li>
+<li><p>ps: 参数服务器，将参数和数据都分布式存储、训练、更新。比如<a href="https://github.com/Angel-ML/angel">tencent angel</a>就是这种实现方式。
+<img src="/images/lr/angel_arc.png" alt="note" /></p></li>
+<li><p>collective communication: 集体通信，通过在进程间引入了同步点的概念达到进程间的同步更新。
+<img src="/images/lr/collective_comm.png" alt="note" /></p></li>
 </ul>
 
 
@@ -223,7 +229,8 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
 
 <p><a href="https://blog.csdn.net/walilk/article/details/51107380">Coursera ML笔记 - 逻辑回归（Logistic Regression）</a><br>
 <a href="https://www.cnblogs.com/batys/p/3298816.html">逻辑回归：使用SGD(Stochastic Gradient Descent)进行大规模机器学习</a><br>
-<a href="https://www.jianshu.com/p/1c2569c894ce">LR模型的特征归一化和离散化</a><br></p>
+<a href="https://www.jianshu.com/p/1c2569c894ce">LR模型的特征归一化和离散化</a><br>
+<a href="http://mpitutorial.com/tutorials/mpi-broadcast-and-collective-communication/zh_cn/">MPI 广播以及集体通信</a></p>
 
         </article>
         <hr>

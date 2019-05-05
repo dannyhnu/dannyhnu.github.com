@@ -5,8 +5,8 @@
     <description></description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 04 May 2019 18:55:44 +0800</pubDate>
-    <lastBuildDate>Sat, 04 May 2019 18:55:44 +0800</lastBuildDate>
+    <pubDate>Sun, 05 May 2019 17:11:50 +0800</pubDate>
+    <lastBuildDate>Sun, 05 May 2019 17:11:50 +0800</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
       <item>
@@ -461,9 +461,15 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
 
 &lt;h3&gt;实现框架&lt;/h3&gt;
 
+&lt;p&gt;SGD的分布式实现一直是业界比较关注的问题, 而问题的本质就是怎么减少进程间订单通讯开销、提高高维数据下的可扩展性。&lt;/p&gt;
+
 &lt;ul&gt;
-&lt;li&gt;&lt;p&gt;SPARK ML: // TODO&lt;/p&gt;&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;angel: // TODO&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;tree all reduce: spark的实现方式，两阶段树分裂算法。每次迭代会把所有参数广播到各个节点，然后分两阶段reduce到driver汇总更新。不管是速度，还是可扩展性，这种实现方式都比较差，所以spark的MLLib一直被人诟病。
+&lt;img src=&quot;/images/lr/spark_sgd.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;ps: 参数服务器，将参数和数据都分布式存储、训练、更新。比如&lt;a href=&quot;https://github.com/Angel-ML/angel&quot;&gt;tencent angel&lt;/a&gt;就是这种实现方式。
+&lt;img src=&quot;/images/lr/angel_arc.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;collective communication: 集体通信，通过在进程间引入了同步点的概念达到进程间的同步更新。
+&lt;img src=&quot;/images/lr/collective_comm.png&quot; alt=&quot;note&quot; /&gt;&lt;/p&gt;&lt;/li&gt;
 &lt;/ul&gt;
 
 
@@ -471,7 +477,8 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
 
 &lt;p&gt;&lt;a href=&quot;https://blog.csdn.net/walilk/article/details/51107380&quot;&gt;Coursera ML笔记 - 逻辑回归（Logistic Regression）&lt;/a&gt;&lt;br&gt;
 &lt;a href=&quot;https://www.cnblogs.com/batys/p/3298816.html&quot;&gt;逻辑回归：使用SGD(Stochastic Gradient Descent)进行大规模机器学习&lt;/a&gt;&lt;br&gt;
-&lt;a href=&quot;https://www.jianshu.com/p/1c2569c894ce&quot;&gt;LR模型的特征归一化和离散化&lt;/a&gt;&lt;br&gt;&lt;/p&gt;
+&lt;a href=&quot;https://www.jianshu.com/p/1c2569c894ce&quot;&gt;LR模型的特征归一化和离散化&lt;/a&gt;&lt;br&gt;
+&lt;a href=&quot;http://mpitutorial.com/tutorials/mpi-broadcast-and-collective-communication/zh_cn/&quot;&gt;MPI 广播以及集体通信&lt;/a&gt;&lt;/p&gt;
 </description>
         <pubDate>Sat, 24 Jun 2017 00:00:00 +0800</pubDate>
         <link>http://localhost:4000/2017/06/24/lr/</link>
