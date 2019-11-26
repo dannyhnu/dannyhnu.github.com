@@ -6,14 +6,14 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>大数据笔记 - spark vs. flink</title>
-    <meta name="description" content="先说观点，spark和flink都是目前能够一站式解决lambda架构的计算框架。因为spark出来的早，现在在活跃度、成熟度方面比flink强。flink发展相对较晚，相比spark各个细节做了很多优化。个人觉得二者是同一个世代计算框架的不同实现，细节方面会相互学习、增强。但要说谁能干掉谁，恐怕都没有这能力。">
+    <title>编程笔记 - 并发</title>
+    <meta name="description" content="并发其实是个很宏大的话题，简单来说是为了消灭等待，追求更高的处理效率。在单机场景下，并发是为了平衡CPU和内存、IO(磁盘|网络)间的速度差异。在分布式场景下，并发则是为了追求完美的分治：任务、数据切割和单个worker处理能力的平衡。">
 
     <link rel="shortcut icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="icon" href="/favicon.ico?" type="image/x-icon">
     <link rel="stylesheet" href=" /css/fontawesome/css/font-awesome.min.css ">
     <link rel="stylesheet" href=" /css/main.css ">
-    <link rel="canonical" href="http://localhost:4000/2019/01/12/spark_vs_flink/">
+    <link rel="canonical" href="http://localhost:4000/2017/04/21/parallel/">
     <link rel="alternate" type="application/rss+xml" title="Dan" href="http://localhost:4000 /feed.xml ">
 
 
@@ -99,11 +99,11 @@
 
         <div class="page clearfix" post>
     <div class="left">
-        <h1>大数据笔记 - spark vs. flink</h1>
+        <h1>编程笔记 - 并发</h1>
         <div class="label">
 
             <div class="label-card">
-                <i class="fa fa-calendar"></i>2019-01-12
+                <i class="fa fa-calendar"></i>2017-04-21
             </div>
 
             <div class="label-card">
@@ -123,7 +123,7 @@
   <i class="fa fa-th-list"></i>
   
     
-        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
+        <a href="/category/#code" title="Category: code" rel="category">code</a>
     
   
 
@@ -149,60 +149,27 @@
         </div>
         <hr>
         <article itemscope itemtype="http://schema.org/BlogPosting">
-        <p>先说观点，spark和flink都是目前能够一站式解决lambda架构的计算框架。因为spark出来的早，现在在活跃度、成熟度方面比flink强。flink发展相对较晚，相比spark各个细节做了很多优化。个人觉得二者是同一个世代计算框架的不同实现，细节方面会相互学习、增强。但要说谁能干掉谁，恐怕都没有这能力。</p>
+        <p>并发其实是个很宏大的话题，简单来说是为了消灭等待，追求更高的处理效率。在单机场景下，并发是为了平衡CPU和内存、IO(磁盘|网络)间的速度差异。在分布式场景下，并发则是为了追求完美的分治：任务、数据切割和单个worker处理能力的平衡。<br></p>
 
 <!-- more -->
 
 
-<p>这里从几个方面比较下二者的区别。</p>
+<p>并发的问题可以分为两类：分工协作、同步互斥。同步互斥在<a href="http://dannyhnu.github.io/2017/04/25/lock/">编程笔记 - 锁</a>已有记录，这里记录下几个分工协作的编程模型(这里请忽略并发、并行的概念差异)。</p>
 
-<h3>内存管理</h3>
-
-<ul>
-<li><p>SPARK. executor内存管理算是spark的一个软肋。spark并不会直接操操控jvm上堆内内存，只是进行逻辑上的"规划式"的管理。
-当jvm起来的时候，executor会维护Storage、Execution的堆内堆外四个内存<em>map</em>, 分别记录各个块在堆内堆外的内存状态。虽然会有一些防止oom的buffer机制，但这种内存记录器不可能完全准确(比如被spark标记释放的对象可能没有被JVM回收)，所以spark不能完全避免OOM。
-<img src="/images/hadoop/spark_mem_1.png" alt="note" />
-<img src="/images/hadoop/spark_mem_2.png" alt="note" /></p></li>
-<li><p>FLINK. 相比spark，flink在内存管理更用心。<br>
-① 采用积极的内存管理策略：用专门的内存池负责每个数据片的分配和管理。<br>
-② 定制化的数据片操作：高效的二进制操作、量身定制的序列化框架。<br>
-<img src="/images/hadoop/flink_mem_1.png" alt="note" /></p></li>
-</ul>
-
-
-<h3>抽象</h3>
+<h3>并发模型</h3>
 
 <ul>
-<li><p>数据模型. 对于底层数据抽象，rdd(Resilient Distributed Datasets)是spark的灵魂。rdd其实是一种分布式的内存抽象，负责处理内存、磁盘数据的分布式存储、和HA(checkpoints)等。spark在rdd上封装出dataset，不管是batch还是streaming都直接通过dataset操控数据。而flink的底层数据抽象成一种有状态流(stateful stream), 然后分别封装成DataStream和Dataset供streaming和batch任务操作数据。在业界普遍无缝结合batch、streaming任务的趋势下，spark的做法显然更合理点。但是flink考虑到了实时计算的上下文状态的重要性，这点更胜一筹。
-<img src="/images/hadoop/flink_data.png" alt="note" /></p></li>
-<li><p>编程模型. 对于数据处理流，spark和flink本质上是一样的。虽然叫法不一样(spark叫job、stage，flink叫transformation、operator)，但其实都是map->shuffle->reduce的dag(有向无环图)。</p></li>
+<li><p>多线程：多线程模型算是最基本的并发了。记录两个比较常见的问题：<br>
+1、进程和线程的区别。进程和线程都是操作系统的基本概念，比较喜欢<a href="http://www.ruanyifeng.com/blog/2013/04/processes_and_threads.html">这篇文章</a>的解释。个人的理解是，CPU太快，比内存、IO快太多。所以操作系统对任务按进程划分，分时间片执行提升CPU利用率。但进程的划分太宽泛，所以每个进程内又对任务切割成多个线程执行。不管划分多少级，本质都是为了提高CPU利用率。而这些划分必然会导致有些是共享的（内存），有些又不共享，所以才会有各种协调机制来防止各级内和各级间的资源冲突。<br>
+2、java中的多线程。Thread：最直白的线程封装。ExecutorService：更好用的线程池工具类。ForkJoin：分治思想的一种实现（下图）。<br>
+<img src="/images/code/java_joinfork.png" alt="note" /><br></p></li>
+<li><p>Callback：回调函数算是开销最小的并发了，应用最多的地方是JS，node算是集大成者。优点是简单灵活，缺点是调度层可能变得复杂。</p></li>
+<li><p>Actor、CSP(通信顺序进程): 二者都是通过借鉴生产者/消费者的模式解耦消息|事件的产生和处理过程。不同的地方是：<br>
+1、消息|事件的收发：Actor注重消息的处理单元(Actor),而不是消息传送方式,所以发送消息需要知道对方是谁。而CSP解耦了发送方和接收方，处理单元不需要关心消息的收发是谁。<br>
+2、消息|事件的存储：Actor会在本地维护一个mailBox来存储消息。而CSP会类似没Q点机制，使用预先定义的Channel来存储消息。</p></li>
+<li><p>协程(微线程)：简单来说，协程是比线程更轻量级的存在。进程、线程都是操作系统的基本调度单位，所以切换会带来一定的开销。而协程是用户控制的任务(函数)切换，系统开销很小。可以这样简单理解，通过生成器(比如python的yield)让函数有了多个出口，转而执行其他代码而不必引起操作系统级别的上下文切换，所以性能会更高。</p></li>
 </ul>
 
-
-<h3>实时计算</h3>
-
-<p>在实时计算(streaming)的支持上，flink做的更出色一点。</p>
-
-<ul>
-<li><p>窗口. spark对窗口的支持比较弱，只能根据time interval起batch任务。flink对窗口的支持很强大，既能按时间驱动(比如：每30秒)，也能按数据驱动(比如：每100个元素)。而且窗口的类型包括滚动窗口（没有重叠）， 滑动窗口（有重叠），以及会话窗口 （由不活动的间隙所打断）。</p></li>
-<li><p>状态. spark streaming不记录数据状态，所以对于一些上下文相关的计算，spark需要借助外部的存储来保存上下文状态。而flink提供了State Backends对历史数据进行保存，比如存在内存(MemoryStateBackend)、文件（FsStateBackend）、外部DB(RocksDBStateBackend)，这样会使得一些上下文相关的计算逻辑更易实现。</p></li>
-</ul>
-
-
-<h3>应用层</h3>
-
-<p>应用层因为spark发展的时间比较久，社区也更活跃点，所以在sql、机器学习的支持都已经做的比较成熟了。</p>
-
-<ul>
-<li><p>SQL. 对flink而言，sql层统一了batch和streaming的编程模型。但是由于支持比较晚，各方面还不是很成熟。二者还有一点不同的是，spark的的底层sql解析器是Catalyst，而flink是Calcite。当然，这个差别并没有什么大的意义。</p></li>
-<li><p>ML：同上，相比spark，flink还有很长的路要走。但是相比spark，flink有个天生的优势。spark由于rdd的不可变性，且不支持状态存储，所以在机器学习的迭代过程中显得力不从心。而flink由于支持状态持久化，所以在算法迭代计算过程中会更方便。</p></li>
-</ul>
-
-
-<h3>附录</h3>
-
-<p><a href="https://www.ibm.com/developerworks/cn/analytics/library/ba-cn-apache-spark-memory-management/index.html">Apache Spark 内存管理详解</a><br>
-<a href="http://wuchong.me/blog/2016/04/29/flink-internals-memory-manage/">Flink 原理与实现：内存管理</a></p>
 
         </article>
         <hr>
@@ -244,7 +211,7 @@
         <h2 id="comments">Comments</h2>
         
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="http://localhost:4000/2019/01/12/spark_vs_flink/" data-title="大数据笔记 - spark vs. flink" data-url="http://localhost:4000/2019/01/12/spark_vs_flink/"></div>
+<div class="ds-thread" data-thread-key="http://localhost:4000/2017/04/21/parallel/" data-title="编程笔记 - 并发" data-url="http://localhost:4000/2017/04/21/parallel/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">

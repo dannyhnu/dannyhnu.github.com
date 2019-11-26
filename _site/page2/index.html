@@ -103,6 +103,63 @@
             
               <li>
                 <h2>
+                  <a class="post-link" href="/2017/09/21/olap/">大数据笔记 - olap</a>
+                </h2>
+                <div class="label">
+                    <div class="label-card">
+                        <i class="fa fa-calendar"></i>2017-09-21
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+                    <div class="label-card">
+                        
+                    </div>
+
+                    <div class="label-card">
+                    
+
+
+<!-- <span class="point">•</span> -->
+<span class="categories">
+  <i class="fa fa-th-list"></i>
+  
+    
+        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
+    
+  
+
+  <!-- <span class="point">•</span> -->
+</span>
+
+
+                    </div>
+
+                    <div class="label-card">
+                    
+<!-- <span class="point">•</span> -->
+<span class="pageTag">
+  <i class="fa fa-tags"></i>
+  
+    
+  
+
+</span>
+
+                    </div>
+                </div>
+                <div class="excerpt">
+                    <p>OLAP(联机分析处理)只是一个概念，背后是一个数据系统，包括数据接入、数据仓库的建设、数据服务(ad hoc查询、可视化、数据挖掘...)。</p>
+
+                </div>
+                <div class="read-all">
+                    <a  href="/2017/09/21/olap/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                </div>
+                <hr>
+              </li>
+            
+              <li>
+                <h2>
                   <a class="post-link" href="/2017/06/24/lr/">ALGO笔记 - LR</a>
                 </h2>
                 <div class="label">
@@ -160,11 +217,11 @@
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2016/05/17/spark-watchouts/">spark  - 那些坑</a>
+                  <a class="post-link" href="/2017/04/25/lock/">编程笔记 - 锁</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2016-05-17
+                        <i class="fa fa-calendar"></i>2017-04-25
                     </div>
                     <div class="label-card">
                         
@@ -182,7 +239,7 @@
   <i class="fa fa-th-list"></i>
   
     
-        <a href="/category/#realtime" title="Category: realtime" rel="category">realtime</a>
+        <a href="/category/#code" title="Category: code" rel="category">code</a>
     
   
 
@@ -206,31 +263,22 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <h3>JobProgressListener问题</h3>
-
-<h5>问题</h5>
-
-<p>Spark Application跑一段时间总会被yarn kill掉，报的错是</p>
-
-<pre><code>Container ... is running beyond physical memory limits. Current usage: xxx GB of xxx GB physical memory used; xx GB of xx GB virtual memory used. Killing container.</code></pre>
-
-
-
+                    <p>为什么要加锁： 因为并发场景下对同一块内存的更新操作会引起bug。怎么加锁？有没有办法避免加锁？这里整理下自己对锁的思考。</p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2016/05/17/spark-watchouts/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2017/04/25/lock/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a>
+                  <a class="post-link" href="/2017/04/21/parallel/">编程笔记 - 并发</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2016-05-16
+                        <i class="fa fa-calendar"></i>2017-04-21
                     </div>
                     <div class="label-card">
                         
@@ -248,7 +296,7 @@
   <i class="fa fa-th-list"></i>
   
     
-        <a href="/category/#realtime" title="Category: realtime" rel="category">realtime</a>
+        <a href="/category/#code" title="Category: code" rel="category">code</a>
     
   
 
@@ -272,22 +320,22 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过<strong>spark broadcast</strong>广播到各个executor进行rdd map join。</p>
+                    <p>并发其实是个很宏大的话题，简单来说是为了消灭等待，追求更高的处理效率。在单机场景下，并发是为了平衡CPU和内存、IO(磁盘|网络)间的速度差异。在分布式场景下，并发则是为了追求完美的分治：任务、数据切割和单个worker处理能力的平衡。<br></p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2016/05/16/spark-broadcast/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2017/04/21/parallel/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
             
               <li>
                 <h2>
-                  <a class="post-link" href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a>
+                  <a class="post-link" href="/2015/03/21/data_structure/">ALGO笔记 - 数据结构</a>
                 </h2>
                 <div class="label">
                     <div class="label-card">
-                        <i class="fa fa-calendar"></i>2013-08-16
+                        <i class="fa fa-calendar"></i>2015-03-21
                     </div>
                     <div class="label-card">
                         
@@ -329,68 +377,11 @@
                     </div>
                 </div>
                 <div class="excerpt">
-                    <p>之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。</p>
+                    <p>数据结构：顺序、链式、索引、散列<br></p>
 
                 </div>
                 <div class="read-all">
-                    <a  href="/2013/08/16/recommendation-douban/"><i class="fa fa-newspaper-o"></i>Read All</a>
-                </div>
-                <hr>
-              </li>
-            
-              <li>
-                <h2>
-                  <a class="post-link" href="/2013/07/14/hadoop-sort/">hadoop sort问题</a>
-                </h2>
-                <div class="label">
-                    <div class="label-card">
-                        <i class="fa fa-calendar"></i>2013-07-14
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-                    <div class="label-card">
-                        
-                    </div>
-
-                    <div class="label-card">
-                    
-
-
-<!-- <span class="point">•</span> -->
-<span class="categories">
-  <i class="fa fa-th-list"></i>
-  
-    
-        <a href="/category/#大数据" title="Category: 大数据" rel="category">大数据</a>
-    
-  
-
-  <!-- <span class="point">•</span> -->
-</span>
-
-
-                    </div>
-
-                    <div class="label-card">
-                    
-<!-- <span class="point">•</span> -->
-<span class="pageTag">
-  <i class="fa fa-tags"></i>
-  
-    
-  
-
-</span>
-
-                    </div>
-                </div>
-                <div class="excerpt">
-                    <p>项目组最近遇到一个hadoop(1.2)问题,因为map中产生的key太多,导致job花费了大量时间在map的shuffle上。准确来说时间应该都花在了IO上面，map产生的数据过多，使得shuffle阶段IO操作过多。 当然因为db设计的原因，map数据过大也是必然的事。  纵观Mapreduce的shuffle过程： sort、 IO 、merge， 似乎也只有sort还有优化的可能。</p>
-
-                </div>
-                <div class="read-all">
-                    <a  href="/2013/07/14/hadoop-sort/"><i class="fa fa-newspaper-o"></i>Read All</a>
+                    <a  href="/2015/03/21/data_structure/"><i class="fa fa-newspaper-o"></i>Read All</a>
                 </div>
                 <hr>
               </li>
@@ -422,7 +413,9 @@
                 </div>
                 <ul class="content-ul" recent>
                     
-                        <li><a href="/2019/01/12/spark_vs_flink/">spark vs. flink</a></li>
+                        <li><a href="/2019/03/21/distributed_system/">大数据笔记 - 分布式系统</a></li>
+                    
+                        <li><a href="/2019/01/12/spark_vs_flink/">大数据笔记 - spark vs. flink</a></li>
                     
                         <li><a href="/2018/11/20/shark-monitor/">大数据笔记 - 监控系统</a></li>
                     
@@ -434,13 +427,11 @@
                     
                         <li><a href="/2017/06/24/lr/">ALGO笔记 - LR</a></li>
                     
-                        <li><a href="/2016/05/17/spark-watchouts/">spark  - 那些坑</a></li>
+                        <li><a href="/2017/04/25/lock/">编程笔记 - 锁</a></li>
                     
-                        <li><a href="/2016/05/16/spark-broadcast/">spark core - Broadcast</a></li>
+                        <li><a href="/2017/04/21/parallel/">编程笔记 - 并发</a></li>
                     
-                        <li><a href="/2013/08/16/recommendation-douban/">豆瓣读书推荐</a></li>
-                    
-                        <li><a href="/2013/07/14/hadoop-sort/">hadoop sort问题</a></li>
+                        <li><a href="/2015/03/21/data_structure/">ALGO笔记 - 数据结构</a></li>
                     
                 </ul>
             </div>
@@ -467,7 +458,16 @@
                             <span class="name">
                                 algorithm
                             </span>
-                            <span class="badge">4</span>
+                            <span class="badge">3</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="/category/#code" class="categories-list-item" cate="code">
+                            <span class="name">
+                                code
+                            </span>
+                            <span class="badge">2</span>
                         </a>
                     </li>
                     
@@ -476,16 +476,7 @@
                             <span class="name">
                                 大数据
                             </span>
-                            <span class="badge">4</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="/category/#realtime" class="categories-list-item" cate="realtime">
-                            <span class="name">
-                                realtime
-                            </span>
-                            <span class="badge">3</span>
+                            <span class="badge">5</span>
                         </a>
                     </li>
                     

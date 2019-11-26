@@ -5,12 +5,36 @@
     <description></description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 10 May 2019 17:19:17 +0800</pubDate>
-    <lastBuildDate>Fri, 10 May 2019 17:19:17 +0800</lastBuildDate>
+    <pubDate>Mon, 05 Aug 2019 14:52:17 +0800</pubDate>
+    <lastBuildDate>Mon, 05 Aug 2019 14:52:17 +0800</lastBuildDate>
     <generator>Jekyll v3.8.5</generator>
     
       <item>
-        <title>spark vs. flink</title>
+        <title>大数据笔记 - 分布式系统</title>
+        <description>&lt;!-- more --&gt;
+
+
+&lt;h3&gt;基础概念&lt;/h3&gt;
+
+&lt;h3&gt;存储&lt;/h3&gt;
+
+&lt;h3&gt;计算&lt;/h3&gt;
+
+&lt;h3&gt;附录&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://medium.com/@leventov/comparison-of-the-open-source-olap-systems-for-big-data-clickhouse-druid-and-pinot-8e042a5ed1c7&quot;&gt;Comparison of the Open Source OLAP Systems for Big Data: ClickHouse, Druid and Pinot&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Thu, 21 Mar 2019 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2019/03/21/distributed_system/</link>
+        <guid isPermaLink="true">http://localhost:4000/2019/03/21/distributed_system/</guid>
+        
+        
+        <category>大数据</category>
+        
+      </item>
+    
+      <item>
+        <title>大数据笔记 - spark vs. flink</title>
         <description>&lt;p&gt;先说观点，spark和flink都是目前能够一站式解决lambda架构的计算框架。因为spark出来的早，现在在活跃度、成熟度方面比flink强。flink发展相对较晚，相比spark各个细节做了很多优化。个人觉得二者是同一个世代计算框架的不同实现，细节方面会相互学习、增强。但要说谁能干掉谁，恐怕都没有这能力。&lt;/p&gt;
 
 &lt;!-- more --&gt;
@@ -71,7 +95,7 @@
         <guid isPermaLink="true">http://localhost:4000/2019/01/12/spark_vs_flink/</guid>
         
         
-        <category>realtime</category>
+        <category>大数据</category>
         
       </item>
     
@@ -499,391 +523,136 @@ LR一般用对数损失：cost(hθ(x),y)=∑i=1m−yilog(hθ(x))−(1−yi)log(1
       </item>
     
       <item>
-        <title>spark  - 那些坑</title>
-        <description>&lt;h3&gt;JobProgressListener问题&lt;/h3&gt;
-
-&lt;h5&gt;问题&lt;/h5&gt;
-
-&lt;p&gt;Spark Application跑一段时间总会被yarn kill掉，报的错是&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Container ... is running beyond physical memory limits. Current usage: xxx GB of xxx GB physical memory used; xx GB of xx GB virtual memory used. Killing container.&lt;/code&gt;&lt;/pre&gt;
-
+        <title>编程笔记 - 锁</title>
+        <description>&lt;p&gt;为什么要加锁： 因为并发场景下对同一块内存的更新操作会引起bug。怎么加锁？有没有办法避免加锁？这里整理下自己对锁的思考。&lt;/p&gt;
 
 &lt;!-- more --&gt;
 
 
-&lt;p&gt;第一反应怀疑哪里有内存泄露，所以dump内存看了下，发现&lt;strong&gt;org.apache.spark.ui.jobs.JobProgressListener&lt;/strong&gt;几乎占掉了一半的内存。于是看代码，发现&lt;em&gt;stageIdToData&lt;/em&gt;和&lt;em&gt;jobIdToData&lt;/em&gt;两个变量保存了所有的job信息和stage信息。好在有&lt;em&gt;trimStagesIfNecessary&lt;/em&gt;和&lt;em&gt;trimJobsIfNecessary&lt;/em&gt;两个方法，当job数或者stage数超过配置的数目，JobProgressListener会每次remove掉10%的job或者stage。&lt;/p&gt;
+&lt;h3&gt;基础概念&lt;/h3&gt;
 
-&lt;h5&gt;解决办法&lt;/h5&gt;
+&lt;p&gt;并发场景下的bug原因一般可归为三类。&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;spark.ui.retainedJobs
-spark.ui.retainedStages&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;h3&gt;Broadcast问题&lt;/h3&gt;
-
-&lt;h5&gt;问题&lt;/h5&gt;
-
-&lt;p&gt;使用broadcast的时候发现task耗费大量时间在&lt;em&gt;Task Deserialization Time&lt;/em&gt;上，且当广播的变量越大task反序列化的时间也越大。于是看到&lt;a href=&quot;http://dongguo.me/blog/2014/12/30/Spark-Usage-Share/&quot;&gt;这篇文章&lt;/a&gt;中提到的&lt;em&gt;正确地使用广播变量(broadcast variables)&lt;/em&gt;时才发现自己在真正产生action的操作前就读取broadcast的变量，导致每次广播都会在driver收集变量然后分发给各个executor。这是问题代码（java）：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;Function&lt;Row, Row&gt; mapFunc = new Function&lt;Row, Row&gt;() {
-    private Map&lt;String, Double&gt; joinMap = broadcastVal.getValue();
-    @Override
-    public Row call(Row row) throws Exception {
-        joinMap.get....
-    }
-}&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;可见性：一个线程对共享变量的修改，另外一个线程能够立刻看到。在多核并发场景下，每个CPU有自己的缓存。当多个线程在不同的 CPU 上执行时，这些线程操作的是不同的 CPU 缓存。所以单个线程的操作并不是马上对其他线程可见。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;原子性：一个或者多个操作在 CPU 执行的过程中不被中断。操作系统按时间片对多线程|进程分时复用，而一条程序语言(多个CPU指令)就可能被切割成多个步骤在多个线程中交叉执行。这中间就不能保证单个线程的一个操作和其他线程不冲突。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;有序性：代码执行顺序和编写顺序一致。高级语言的编译器优化带来的执行顺序问题。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 
-&lt;h5&gt;解决办法&lt;/h5&gt;
+&lt;h3&gt;锁的分类&lt;/h3&gt;
 
-&lt;p&gt;在action方法内部调用&lt;em&gt;getValue()&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;锁的种类繁多，最终不过两点考虑的平衡：保证互斥和减少锁竞争。加锁是为了保证互斥，但毫无疑问会影响执行效率。所以一般会根据业务特点来减少锁竞争，比如减少锁的持有时间、降低锁的请求频率、使用带有协调机制的独占锁，这些机制允许更高的并发性。&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;Function&lt;Row, Row&gt; mapFunc = new Function&lt;Row, Row&gt;() {
-    @Override
-    public Row call(Row row) throws Exception {
-        Map&lt;String, Double&gt; joinMap = broadcastVal.getValue();
-        joinMap.get....
-    }
-}&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;h3&gt;spark sql聚合函数问题&lt;/h3&gt;
-
-&lt;h5&gt;问题&lt;/h5&gt;
-
-&lt;p&gt;先说下背景。为了最大限度的减少每次查询cover的数据，我们的数据模型不仅按月分表，而且单月的数据都会做行转列的操作。简单点说就是把指标项转成31列，随着时间的发展去填充列而不是增加数据行数。这样做的好处就是每个月第一天和到最后一天的数据量都会差不多，而这样做的代价就是更加负责的sql和每次查询都要做列转行的反转。
-举个栗子，查询20160301到20160325分年龄的收入，一般的sql是&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;SELECT age, SUM(income) FROM  table_201603 WHERE date BETWEEN 20160301 AND 20160325 GROUP BY age&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;根据加不加锁可以划分为：&lt;br&gt;
+① 悲观锁：比较严格，总是假设最坏的情况，每次取数据时都认为其他线程会修改，所以都会加锁阻止其他线程执行。&lt;br&gt;
+② 悲观锁：操作时不会上锁，一般通过版本号机制或CAS来实现。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;根据线程获取锁的顺序划分为：&lt;br&gt;
+公平锁：多个线程按照申请锁的顺序来获取锁。&lt;br&gt;
+非公平锁：多个线程获取锁的顺序并不是按照申请锁的顺序，所以有可能会造成优先级反转或者饥饿现象。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 
-&lt;p&gt;但是我们得这样处理&lt;/p&gt;
+&lt;h3&gt;分布式锁&lt;/h3&gt;
 
-&lt;pre&gt;&lt;code&gt;SELECT age, SUM(income_1)  AS inome_20160301, SUM(income_2)  AS inome_20160302... , SUM(income_25)  AS inome_20160325 FROM  table_201603 GROUP BY age&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;分布式锁本质上和单机锁没有差别：在一个集群中，lock只能在同一时间只能被一台机器上的一个线程所拥有。比较流行的实现框架有redis、zk等。&lt;/p&gt;
+
+&lt;h3&gt;java中的锁&lt;/h3&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;volatile：这个关键词并不是java特有的，很多编程语言都会采用volatile去解决可见性问题。volatile的含义是禁用CPU缓存，告诉cpu绕过缓存直接操作内存。但这个并不能解决原子问题。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;synchronized：这其实就是java对lock(可重入锁)的封装工具，始终保证一个代码块的访问控制。特别要注意使用synchronized的粒度。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;工具类：Atomic(原子操作类)、ThreadLocal(线程安全的全局变量)、Concurrent(细粒度分段锁+Volatile)...&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 
-&lt;p&gt;然后再flatten查询结果。
-因为一般的查询结果集比较小，所以flatten结果集的代价也比较小。但是这样做在spark sql上碰到一个坑，当一条sql中&lt;strong&gt;SUM&lt;/strong&gt;的数量超过24个时候会严重影响sql的执行速度(5-10倍的性能差)。
-//TODO 原因待查&lt;/p&gt;
+&lt;h3&gt;无锁编程&lt;/h3&gt;
 
-&lt;h5&gt;解决办法&lt;/h5&gt;
+&lt;p&gt;无锁编程最容易想到的就是数据不变或者消除共享，没有共享就不用加锁。比如java中的final(数据不变性)、Thread Local Storage(线程本地存储)都是这种思路。但一个大型项目完全无锁是不太现实的，通常都是采用无锁操作或者无锁的数据结构来提供系统性能。当然还有各种无锁的编程模型来实现无锁并发。&lt;/p&gt;
 
-&lt;p&gt;目前的spark 1.6 还是存在这个问题，所以只好做和谐处理。当查询中&lt;strong&gt;SUM&lt;/strong&gt;超过24个，将sql拆成多条sql处理。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;无锁操作：常见的无锁操作有CAS、Copy-on-write等。&lt;br&gt;
+① CAS(Compare-and-Swap),即比较并替换，当原始值和期望值一致的时候，替换目标变量的内存地址。CPU的总线锁能保证真正意义上的原子操作，CAS一般加上循环来实现并不是很严格的原子操作(比如ABA问题)&lt;br&gt;
+② Copy-on-write。核心思想是空间换时间，复制数据到新内存块，更新完改变引用地址。和很多DB的数据分版本思想类似，只能保证最终一致性。&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;无锁数据结构：常见的无锁数据结构有无锁队列(lock free queue)、无锁容器(b+tree、list、hashmap)等。以无锁队列为例，可以通过链表或者环形数组(ring buffer)+CAS出入队列操作来实现，这其中以Disruptor为优秀代表。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;h3&gt;spark sql数据类型问题&lt;/h3&gt;
 
-&lt;h5&gt;问题&lt;/h5&gt;
+&lt;h3&gt;附录&lt;/h3&gt;
 
-&lt;p&gt;数据中有个&lt;em&gt;曝光&lt;/em&gt;字段，生成模型的时候定义成了&lt;em&gt;int&lt;/em&gt;类型。sql的聚合函数&lt;em&gt;SUM&lt;/em&gt;会把结果转成&lt;em&gt;long&lt;/em&gt;类型。但是在测试的时候发现结果会变小。这个坑比较隐蔽，貌似只有当在单个task内的聚合值超过21亿的时候才会影响最终结果。&lt;/p&gt;
-
-&lt;h5&gt;解决办法&lt;/h5&gt;
-
-&lt;p&gt;数据源把&lt;em&gt;int&lt;/em&gt;改成&lt;em&gt;long&lt;/em&gt;类型就OK了&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;https://juejin.im/entry/595f074b51882568b0030520&quot;&gt;无锁编程简介&lt;/a&gt;&lt;br&gt;
+&lt;a href=&quot;https://coolshell.cn/articles/8239.html&quot;&gt;无锁队列的实现&lt;/a&gt;&lt;/p&gt;
 </description>
-        <pubDate>Tue, 17 May 2016 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/05/17/spark-watchouts/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/05/17/spark-watchouts/</guid>
+        <pubDate>Tue, 25 Apr 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/04/25/lock/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/04/25/lock/</guid>
         
         
-        <category>realtime</category>
+        <category>code</category>
         
       </item>
     
       <item>
-        <title>spark core - Broadcast</title>
-        <description>&lt;p&gt;最近刚完成一个spark sql项目：大数据实时查询引擎。所有的数据模型整合成大宽表以parquet(列存，高压缩比，完美整合spark sql)格式存在hdfs上。做成大宽表的好处是，一些费时的join操作在预处理阶段就做好了，查询时只会有简单的group by等操作。但是由于业务的特点，我们的历史数据会变(坑爹啊)，而且没有时限(一两年前的说变就变)。好在这部分变化的数据不大，可以经过&lt;strong&gt;spark broadcast&lt;/strong&gt;广播到各个executor进行rdd map join。&lt;/p&gt;
+        <title>编程笔记 - 并发</title>
+        <description>&lt;p&gt;并发其实是个很宏大的话题，简单来说是为了消灭等待，追求更高的处理效率。在单机场景下，并发是为了平衡CPU和内存、IO(磁盘|网络)间的速度差异。在分布式场景下，并发则是为了追求完美的分治：任务、数据切割和单个worker处理能力的平衡。&lt;br&gt;&lt;/p&gt;
 
 &lt;!-- more --&gt;
 
 
-&lt;p&gt;说回这篇文章的主题-spark broadcast。spark目前有两种广播的方法：http和p2p。二者的区别是各个executor在第一次怎么拿到广播变量。一旦executor拿到广播变量后就会立即放到本地storage。&lt;/p&gt;
+&lt;p&gt;并发的问题可以分为两类：分工协作、同步互斥。同步互斥在&lt;a href=&quot;http://dannyhnu.github.io/2017/04/25/lock/&quot;&gt;编程笔记 - 锁&lt;/a&gt;已有记录，这里记录下几个分工协作的编程模型(这里请忽略并发、并行的概念差异)。&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;// 把广播变量缓存到BlockManager，这样后续的任务就不需要再去重新fetch了
-SparkEnv.get.blockManager.putSingle(blockId, value_, StorageLevel.MEMORY_AND_DISK, tellMaster = false)
-&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;并发模型&lt;/h3&gt;
 
-
-&lt;h4&gt;HttpBroadcast&lt;/h4&gt;
-
-&lt;p&gt;Http的广播方法比较简单，在driver写一个local file，起一个http server。所以executor在&lt;em&gt;getValue&lt;/em&gt;的时候其实就是通过url访问driver上的http server拿到广播变量。&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;//！代码都精简过的
-/*
- * driver 写local file
- */
-private def write(id: Long, value: Any) {
-    // 拿到一个本地文件
-    val file = getFile(id) 
-    val fileOutputStream = new FileOutputStream(file)
-    ...
-   // 序列化
-    val ser = SparkEnv.get.serializer.newInstance()
-    val serOut = ser.serializeStream(out)
-    ...
-    serOut.writeObject(value)
- }
- /*
- * 起http server
- */
-private def createServer(conf: SparkConf) {
-  broadcastDir = Utils.createTempDir(Utils.getLocalDir(conf), &quot;broadcast&quot;)
-  val broadcastPort = conf.getInt(&quot;spark.broadcast.port&quot;, 0)
-  server =
-    new HttpServer(conf, broadcastDir, securityManager, broadcastPort, &quot;HTTP broadcast server&quot;)
-  server.start()
-  serverUri = server.uri
-}
- /*
- * 读广播变量
- */
-private def read[T: ClassTag](id: Long): T = {
-  // 组装请求
-  val url = serverUri + &quot;/&quot; + BroadcastBlockId(id).name
-  uc = new URL(url).openConnection()
-  ...
-   //请求广播变量
-  val inputStream = uc.getInputStream
-  val in = new BufferedInputStream(inputStream, bufferSize)
-  ...
-  // 反序列化
-  val ser = SparkEnv.get.serializer.newInstance()
-  val serIn = ser.deserializeStream(in)
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;h4&gt;TorrentBroadcast&lt;/h4&gt;
-
-&lt;p&gt;Torrent采用spark storage模块广播数据。首先会按照特定大小（默认4M）对数据进行分块,  然后把各个piece写到storage。第一次读取变量也是从driver或者其他的executor拿到各个piece然后保存到本地。&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;//！代码都精简过的
-/*
- * 数据写入storage
- */
-private def writeBlocks(value: T): Int = {
-  // driver上保存一份广播数据，防止重复存储
-  SparkEnv.get.blockManager.putSingle(broadcastId, value, StorageLevel.MEMORY_AND_DISK,
-    tellMaster = false)
-   //对数据进行分块
-  val blocks =
-    TorrentBroadcast.blockifyObject(value, blockSize, SparkEnv.get.serializer, compressionCodec)
-    // 各个块写到storage
-  blocks.zipWithIndex.foreach { case (block, i) =&gt;
-    SparkEnv.get.blockManager.putBytes(
-      BroadcastBlockId(id, &quot;piece&quot; + i),
-      block,
-      StorageLevel.MEMORY_AND_DISK_SER,
-      tellMaster = true)
-  }
-  blocks.length
-}
- /*
- * 读取数据
- */
- private def readBlocks(): Array[ByteBuffer] = {
-...
-  //循环各个数据块
-  for (pid &lt;- Random.shuffle(Seq.range(0, numBlocks))) {
-    val pieceId = BroadcastBlockId(id, &quot;piece&quot; + pid)
-    // 从本地取
-    def getLocal: Option[ByteBuffer] = bm.getLocalBytes(pieceId)
-    // 本地取不到则从远程取
-    def getRemote: Option[ByteBuffer] = bm.getRemoteBytes(pieceId).map { block =&gt;
-      // 取到保存到本地
-      SparkEnv.get.blockManager.putBytes(
-        pieceId,
-        block,
-        StorageLevel.MEMORY_AND_DISK_SER,
-        tellMaster = true)
-      block
-    }
-    val block: ByteBuffer = getLocal.orElse(getRemote).getOrElse(
-      throw new SparkException(s&quot;Failed to get $pieceId of $broadcastId&quot;))
-    blocks(pid) = block
-  }
-  blocks
-}
-&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;多线程：多线程模型算是最基本的并发了。记录两个比较常见的问题：&lt;br&gt;
+1、进程和线程的区别。进程和线程都是操作系统的基本概念，比较喜欢&lt;a href=&quot;http://www.ruanyifeng.com/blog/2013/04/processes_and_threads.html&quot;&gt;这篇文章&lt;/a&gt;的解释。个人的理解是，CPU太快，比内存、IO快太多。所以操作系统对任务按进程划分，分时间片执行提升CPU利用率。但进程的划分太宽泛，所以每个进程内又对任务切割成多个线程执行。不管划分多少级，本质都是为了提高CPU利用率。而这些划分必然会导致有些是共享的（内存），有些又不共享，所以才会有各种协调机制来防止各级内和各级间的资源冲突。&lt;br&gt;
+2、java中的多线程。Thread：最直白的线程封装。ExecutorService：更好用的线程池工具类。ForkJoin：分治思想的一种实现（下图）。&lt;br&gt;
+&lt;img src=&quot;/images/code/java_joinfork.png&quot; alt=&quot;note&quot; /&gt;&lt;br&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Callback：回调函数算是开销最小的并发了，应用最多的地方是JS，node算是集大成者。优点是简单灵活，缺点是调度层可能变得复杂。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Actor、CSP(通信顺序进程): 二者都是通过借鉴生产者/消费者的模式解耦消息|事件的产生和处理过程。不同的地方是：&lt;br&gt;
+1、消息|事件的收发：Actor注重消息的处理单元(Actor),而不是消息传送方式,所以发送消息需要知道对方是谁。而CSP解耦了发送方和接收方，处理单元不需要关心消息的收发是谁。&lt;br&gt;
+2、消息|事件的存储：Actor会在本地维护一个mailBox来存储消息。而CSP会类似没Q点机制，使用预先定义的Channel来存储消息。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;协程(微线程)：简单来说，协程是比线程更轻量级的存在。进程、线程都是操作系统的基本调度单位，所以切换会带来一定的开销。而协程是用户控制的任务(函数)切换，系统开销很小。可以这样简单理解，通过生成器(比如python的yield)让函数有了多个出口，转而执行其他代码而不必引起操作系统级别的上下文切换，所以性能会更高。&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 </description>
-        <pubDate>Mon, 16 May 2016 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2016/05/16/spark-broadcast/</link>
-        <guid isPermaLink="true">http://localhost:4000/2016/05/16/spark-broadcast/</guid>
+        <pubDate>Fri, 21 Apr 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/04/21/parallel/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/04/21/parallel/</guid>
         
         
-        <category>realtime</category>
+        <category>code</category>
         
       </item>
     
       <item>
-        <title>豆瓣读书推荐</title>
-        <description>&lt;p&gt;之前还一直跟同事抱怨说做数据挖掘，没有数据挖个毛线啊。 于是naza很happy的把豆瓣读书的数据都爬下来了 ‘恩 你挖个够吧’。好吧， 一直想看看豆瓣读书的推荐到底是怎么做的。&lt;/p&gt;
+        <title>ALGO笔记 - 数据结构</title>
+        <description>&lt;p&gt;数据结构：顺序、链式、索引、散列&lt;br&gt;&lt;/p&gt;
 
 &lt;!-- more --&gt;
 
 
-&lt;p&gt;豆瓣读书的推荐主要有两个页面：
-&lt;br /&gt;
-一个是每本书的主页， 比如梁文道的&lt;a href=&quot;http://book.douban.com/subject/4031698/&quot;&gt;读者&lt;/a&gt;。豆瓣会有一个推荐的section: &lt;em&gt;喜欢读&quot;读者&quot;的人也喜欢...&lt;/em&gt;。 这句话似乎是说推荐是基于&lt;strong&gt;协同过滤&lt;/strong&gt;的。我很奇怪为什么豆瓣会用这样的标题，这里明显不会是基于协同的推荐， 因为我用不同的用户登录， 推荐的结果是一样的。从推荐的结果来也像是&lt;strong&gt;content based&lt;/strong&gt;， 更准确点是&lt;strong&gt;tag-based&lt;/strong&gt;。 因为推荐的大多还是梁文道的书，还有些书tag是&lt;em&gt;随笔&lt;/em&gt;、&lt;em&gt;文化&lt;/em&gt;什么的。
-&lt;br /&gt;
-另一个是&lt;a href=&quot;http://book.douban.com/recommended&quot;&gt;豆瓣猜&lt;/a&gt;。首先会列出你可能感兴趣的新书。之后是你可能感兴趣的tag和book。这里应该是混合推荐了。
-&lt;br /&gt;
-当然，这都是猜想。试试看吧。&lt;/p&gt;
+&lt;h3&gt;数组&lt;/h3&gt;
 
-&lt;h4&gt;Warm-up&lt;/h4&gt;
+&lt;h3&gt;线性表&lt;/h3&gt;
 
-&lt;p&gt;先解释下数据模型，爬的数据有people，book，tag以及相互的对应关系。构建三个matrix就可以将三者联系起来了。如图:
-&lt;br /&gt;
-&lt;img src=&quot;/images/recommendation/douban_model.jpg&quot; alt=&quot;data model&quot; /&gt;
-&lt;br /&gt;
-再说明下， 所有的算法都是based on mahout。&lt;/p&gt;
+&lt;h3&gt;栈&lt;/h3&gt;
 
-&lt;h4&gt;tag-based&lt;/h4&gt;
+&lt;h3&gt;队列&lt;/h3&gt;
 
-&lt;p&gt;给定一本书， 找到一本tag相似的书。可以把book-tag matrix作input，这样tag就相当于book的dimension, 可以用&lt;em&gt;PearsonCorrelationSimilarity&lt;/em&gt;， 即皮尔逊系数来衡量book之间的距离。这样找相似的书， 即找最近的邻居：&lt;/p&gt;
+&lt;h3&gt;串&lt;/h3&gt;
 
-&lt;pre&gt;&lt;code&gt;
-UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(getHowMany(), similarity, model);
-&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;树&lt;/h3&gt;
 
-
-&lt;p&gt;但是推荐的结果不尽人意。想到之前微博推荐的经验， 可以先对book根据book-tag matrix&lt;strong&gt;聚类&lt;/strong&gt;，再在每个cluster里找邻居，这样可以消除一些离群点的影响。看结果：
-&lt;br /&gt;
-&lt;br /&gt;
-&lt;img src=&quot;/images/recommendation/rec_douban_tag.jpg&quot; alt=&quot;data model&quot; /&gt;
-&lt;br /&gt;
-&lt;br /&gt;
-可以看到推荐的结果有&lt;a href=&quot;http://book.douban.com/subject/3644791/&quot;&gt;噪音太多&lt;/a&gt;、&lt;a href=&quot;http://book.douban.com/subject/1831760/&quot;&gt;弱水三千&lt;/a&gt;...&lt;/p&gt;
-
-&lt;h4&gt;协同过滤&lt;/h4&gt;
-
-&lt;p&gt;协同过滤， 说白了也是在people-book matrix里找邻居。不同的是user-based collaborative filtering是把book当成people的dimension。而item-based collaborative filtering则反过来。这里仍然用&lt;em&gt;PearsonCorrelationSimilarity&lt;/em&gt;来衡量相似度：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;
-UserSimilarity similarity = new PearsonCorrelationSimilarity(model);
-NearestNUserNeighborhood neighbors = new NearestNUserNeighborhood(numNeighbor, similarity, model);
-Recommender recommender = new GenericUserBasedRecommender(model, neighbors, similarity);
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;p&gt;很遗憾没有爬到自己的账号。随便选个账号来测试，结果：
-&lt;br /&gt;
-&lt;br /&gt;
-item-based
-&lt;img src=&quot;/images/recommendation/rec_douban_item.jpg&quot; alt=&quot;data model&quot; /&gt;
-&lt;br /&gt;
-&lt;br /&gt;
-user-based
-&lt;img src=&quot;/images/recommendation/rec_douban_user.jpg&quot; alt=&quot;data model&quot; /&gt;
-&lt;br /&gt;
-&lt;br /&gt;
-因为爬到的数据不多， 本来就稀疏的matrix交集更少。推荐出来的结果都是些可能看过一两本相同书的people给出的推荐。这也反映出协同过滤的cold start问题。不知道豆瓣是怎样解决的。
-&lt;br /&gt;
-&lt;br /&gt;
-同上，我也试着对people根据people-tag matrix先聚类再做item-based collaborative filtering。推荐出来的比较像tag-based的结果。&lt;/p&gt;
-
-&lt;h4&gt;new book recommendation&lt;/h4&gt;
-
-&lt;p&gt;豆瓣还有个推荐新书的功能。根据爬到的数据，我能想到的方法就是计算people的历史tag跟新书tag之间distance，选距离最近的people。但是这时的距离应该是什么呢？ EuclideanDistance？试了下， 结果比较无语，因为推荐出来的都是些过分活跃的用户-那些所有tag都有比较大的weight的用户。
-&lt;br /&gt;
-&lt;br /&gt;
-其实这也可以理解， content based必然会有热门问题，比如豆瓣的tag-based推荐，像&lt;em&gt;文学&lt;/em&gt;、&lt;em&gt;小说&lt;/em&gt;这样的tag就比较泛滥。 所以很多文学类小说的推荐常常会被几本热门的名著占据。 按理说豆瓣应该会对tag清理过，不明白为什么还是会有这样的问题。
-&lt;br /&gt;
-&lt;br /&gt;
-显然要换个距离， 欧式距离会计算所有tag间的距离，是否可以让距离只考虑新书的tag在people上的weight。想到了对people向量做横向归一处理，这样就消除了热门tag对people的影响，也就能找到新书的tag占最大weigh的people。 看结果:
-&lt;br /&gt;
-&lt;img src=&quot;/images/recommendation/rec_douban_new.jpg&quot; alt=&quot;data model&quot; /&gt;
-&lt;br /&gt;
-&lt;br /&gt;
-这样就为&lt;a href=&quot;http://book.douban.com/subject/1041007/&quot;&gt;哈利·波特与魔法石&lt;/a&gt;找到了用户&lt;a href=&quot;http://book.douban.com/people/tuzicxy/collect&quot;&gt;tuzicxy&lt;/a&gt;、&lt;a href=&quot;http://book.douban.com/people/70621573/collect&quot;&gt;70621573&lt;/a&gt;...&lt;/p&gt;
+&lt;h3&gt;图&lt;/h3&gt;
 </description>
-        <pubDate>Fri, 16 Aug 2013 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2013/08/16/recommendation-douban/</link>
-        <guid isPermaLink="true">http://localhost:4000/2013/08/16/recommendation-douban/</guid>
+        <pubDate>Sat, 21 Mar 2015 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2015/03/21/data_structure/</link>
+        <guid isPermaLink="true">http://localhost:4000/2015/03/21/data_structure/</guid>
         
         
         <category>algorithm</category>
-        
-      </item>
-    
-      <item>
-        <title>hadoop sort问题</title>
-        <description>&lt;p&gt;项目组最近遇到一个hadoop(1.2)问题,因为map中产生的key太多,导致job花费了大量时间在map的shuffle上。准确来说时间应该都花在了IO上面，map产生的数据过多，使得shuffle阶段IO操作过多。 当然因为db设计的原因，map数据过大也是必然的事。  纵观Mapreduce的shuffle过程： sort、 IO 、merge， 似乎也只有sort还有优化的可能。&lt;/p&gt;
-
-&lt;!-- more --&gt;
-
-
-&lt;p&gt;&lt;br /&gt;
-&lt;br /&gt;
-这里先跑下题 Mapreduce本是一个聚合的过程, 但是因为后台db采用了星形的架构 使得map将数据发散到一个更广的空间中。 key多的点让人觉得不可理喻。 或许这种设计本身就不适合用Mapreduce来做ETL。
-&lt;br /&gt;
-&lt;br /&gt;
-言归正传，于是项目组决定对Mapreduce的排序进行优化。 下面是优化的笔记：
-&lt;br /&gt;
-&lt;br /&gt;
-Mapreduce的shuffle过程包括map阶段和reduce阶段。   在map阶段， 如图， 首先将输出写到缓存当中。 当缓存大小达到“阈值”时（默认的大小是缓存的80%），  变会进行'spill'： 即sort and combiner。  sort完才会把数据写进磁盘。  坑爹的是，  根据Mapreduce的设计(hadoop1.2)， sort是个无法避免的过程。
-&lt;br /&gt;
-&lt;img src=&quot;/images/hadoop/map_shuffle.jpg&quot; alt=&quot;map&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;而在sort的过程中， 由于hadoop往缓存中写入的不是对象， 而是序列化以后的二进制数据。 所以在WritableComparator中， 会首先将这些二进制数据反序列化为对象， 然后再调用这些对象的compareTo方法进行比较：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-  try {
-    buffer.reset(b1, s1, l1);                   // parse key1
-    key1.readFields(buffer);
-  
-    buffer.reset(b2, s2, l2);                   // parse key2
-    key2.readFields(buffer);
-  
-  } catch (IOException e) {
-    throw new RuntimeException(e);
-  }
-  return compare(key1, key2);                   // compare them
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;p&gt;所以说， 每次compare的过程都会有两个反序列化的过程。 当然还好hadoop留了一条后路， Job对象上有一个方法：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;setSortComparatorClass(RawComparator c)
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;p&gt;这样我们就能避免反序列化过程了：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;public class SampleComparator implements RawComparator{
-  private Logger logger = Logger.getLogger(SampleComparator.class);
-
-  @Override
-  public int compare(Object o1, Object o2) {
-    logger.error(&quot;SampleComparator does not support method compare(Object o1, Object o2)!&quot;);
-    throw new RuntimeException(&quot;unsupported method!&quot;);
-  }
-
-  @Override
-  public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-    return WritableComparator.compareBytes(b1, s1, l1, b2, s2, l2);
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-
-&lt;p&gt;当然， 进行这种修改的时候一定要确保是否序列化对排序结果没有影响。&lt;/p&gt;
-
-&lt;h5&gt;附&lt;/h5&gt;
-
-&lt;p&gt;顺便记一下最近看到的一个问题：
- 为什么hadoop不适合做实时计算？ 个人的感觉主要是IO太多， 再加上启动时间、 网络传输等因素 ，就决定了hadoop在实时这个领域难有作为。
-&lt;br /&gt;storm就不一样，数据都是在内存中， task一直在监听数据， 除非kill掉(下次系统看下storm)&lt;/p&gt;
-</description>
-        <pubDate>Sun, 14 Jul 2013 00:00:00 +0800</pubDate>
-        <link>http://localhost:4000/2013/07/14/hadoop-sort/</link>
-        <guid isPermaLink="true">http://localhost:4000/2013/07/14/hadoop-sort/</guid>
-        
-        
-        <category>大数据</category>
         
       </item>
     
